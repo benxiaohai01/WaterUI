@@ -1,18 +1,86 @@
-# Build and Release Folders
-bin-debug/
-bin-release/
-[Oo]bj/
-[Bb]in/
+# ============================================
+# 依赖
+# ============================================
+node_modules/
+.pnpm-store/
+*.log
 
-# Other files and folders
-.settings/
+# ============================================
+# 构建产物
+# ============================================
+dist/
+lib/
+es/
+types/
+*.local
+*.tsbuildinfo
 
-# Executables
-*.swf
-*.air
-*.ipa
-*.apk
+# 组件库构建产物
+packages/*/dist/
+packages/*/lib/
+packages/*/es/
+packages/*/types/
 
-# Project files, i.e. `.project`, `.actionScriptProperties` and `.flexProperties`
-# should NOT be excluded as they contain compiler settings and other important
-# information for Eclipse / Flash Builder.
+# ============================================
+# 文档构建
+# ============================================
+docs/.vitepress/dist/
+docs/.vitepress/cache/
+docs-dist/
+
+# ============================================
+# 测试
+# ============================================
+coverage/
+test-results/
+playwright-report/
+
+# ============================================
+# 编辑器
+# ============================================
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.suo
+*.sw?
+
+# ============================================
+# 系统文件
+# ============================================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ============================================
+# 环境变量
+# ============================================
+.env
+.env.local
+.env.*.local
+
+# ============================================
+# 自动生成文件
+# ============================================
+auto-imports.d.ts
+components.d.ts
+
+# ============================================
+# 临时文件
+# ============================================
+*.tmp
+*.temp
+.cache/
+.temp/
+
+# ============================================
+# 压缩文件
+# ============================================
+*.zip
+*.tar.gz
+*.rar
+
+# ============================================
+# 保留空目录
+# ============================================
+!.gitkeep
