@@ -1,0 +1,24 @@
+{
+  "name": "@water-ui/theme",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.scss",
+    "./tokens": "./src/tokens.scss",
+    "./mixins": "./src/mixins/index.scss",
+    "./src/*": "./src/*",
+    "./dist/base.css": "./dist/base.css",
+    "./dist/light.css": "./dist/light.css",
+    "./dist/dark.css": "./dist/dark.css"
+  },
+  "scripts": {
+    "build": "node scripts/copy.mjs",
+    "typecheck": "echo 'no typecheck for theme'",
+    "lint": "echo 'no lint for theme'",
+    "test": "echo 'no test for theme'"
+  },
+  "devDependencies": {
+    "sass": "^1.89.0"
+  }
+}

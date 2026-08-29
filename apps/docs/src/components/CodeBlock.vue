@@ -1,0 +1,122 @@
+<script setup lang="ts">
+import { ref } from 'vue'
+
+defineOptions({ name: 'DocsCodeBlock' })
+
+const props = defineProps<{
+  code: string
+  language?: string
+}>()
+
+const copied = ref(false)
+const expanded = ref(false)
+
+const copy = async () => {
+  try {
+    await navigator.clipboard.writeText(props.code)
+    copied.value = true
+    window.setTimeout(() => {
+      copied.value = false
+    }, 1500)
+  } catch {
+    copied.value = false
+  }
+}
+</script>
+
+<template>
+  <div class="code-block">
+    <div class="code-block__bar">
+      <span>{{ language || 'vue' }}</span>
+      <wt-space :size="8">
+        <wt-button size="small" type="default" @click="copy">
+          <template #icon>
+            <wt-icon :name="copied ? 'check' : 'copy'" :size="14" />
+          </template>
+          {{ copied ? '已复制' : '复制代码' }}
+        </wt-button>
+        <wt-button size="small" type="default" @click="expanded = !expanded">
+          <template #icon>
+            <wt-icon :name="expanded ? 'chevron-down' : 'code'" :size="14" />
+          </template>
+          {{ expanded ? '收起' : '展开' }}
+        </wt-button>
+      </wt-space>
+    </div>
+    <div class="code-block__body" :class="{ 'is-expanded': expanded }">
+      <pre><code>{{ code }}</code></pre>
+    </div>
+  </div>
+</template>
+
+<style scoped lang="scss">
+.code-block {
+  overflow: hidden;
+  border-radius: var(--wt-radius-md);
+  background: color-mix(in srgb, var(--wt-surface) 72%, var(--wt-primary) 8%);
+  color: var(--wt-text);
+  box-shadow:
+    inset 3px 4px 10px rgba(0, 0, 0, 0.12),
+    inset -2px -2px 6px var(--wt-shadow-light),
+    0 10px 26px color-mix(in srgb, var(--wt-primary) 14%, transparent);
+}
+
+.code-block__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--wt-primary) 16%, transparent);
+  color: var(--wt-text-secondary);
+  font-size: 12px;
+}
+
+.code-block__body {
+  position: relative;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.16s ease;
+}
+
+.code-block__body::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 56px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in srgb, var(--wt-surface) 78%, var(--wt-primary) 8%)
+  );
+  pointer-events: none;
+}
+
+.code-block__body.is-expanded {
+  max-height: 1600px;
+}
+
+.code-block__body.is-expanded::after {
+  display: none;
+}
+
+.code-block pre {
+  margin: 0;
+  padding: 16px;
+  overflow: auto;
+  background: transparent;
+  color: var(--wt-text);
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre;
+}
+
+@media (max-width: 560px) {
+  .code-block__bar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+</style>

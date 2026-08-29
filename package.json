@@ -1,0 +1,22 @@
+{
+  "name": "water-ui-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Water UI monorepo",
+  "packageManager": "pnpm@11.24.0",
+  "scripts": {
+    "dev": "pnpm --filter @water-ui/docs dev",
+    "dev:docs": "pnpm --filter @water-ui/docs dev",
+    "build": "pnpm --filter @water-ui/theme build && pnpm --filter @water-ui/components build && pnpm --filter @water-ui/docs build",
+    "build:lib": "pnpm --filter @water-ui/components build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.0",
+    "vue-tsc": "^2.2.10"
+  }
+}

@@ -1,0 +1,105 @@
+:root {
+  /* ===== 基础表面色 ===== */
+  --wt-bg: #eceff3;                /* 页面背景色 */
+  --wt-surface: #f2f5f8;           /* 组件基础表面色 */
+  --wt-surface-strong: #e6ebf0;    /* 组件强调表面色 */
+
+  /* ===== 文本颜色 ===== */
+  --wt-text: #222222;              /* 主文本颜色 */
+  --wt-text-secondary: #666666;    /* 次要文本颜色 */
+  --wt-text-placeholder: #999999;  /* 占位文本颜色 */
+
+  /* ===== 语义色 ===== */
+  --wt-primary: #3d7eff;           /* 主色 */
+  --wt-primary-soft: rgba(61, 126, 255, 0.14); /* 主色柔化背景 */
+  --wt-success: #2e7d32;           /* 成功色 */
+  --wt-warning: #c47a00;           /* 警告色 */
+  --wt-danger: #c62828;            /* 危险色 */
+  --wt-info: #5c6bc0;              /* 信息色 */
+
+  /* ===== 阴影与高光 ===== */
+  --wt-shadow-dark-alpha: 0.04;                  /* 基础内阴影暗部透明度 */
+  --wt-shadow-dark-alpha-strong: 0.06;           /* 强调内阴影暗部透明度 */
+  --wt-highlight: rgba(255, 255, 255, 1);        /* 主高光颜色 */
+  --wt-highlight-small: rgba(255, 255, 255, 0.85); /* 次高光颜色 */
+  --wt-shadow-dark: rgba(0, 0, 0, 0.18);         /* 深阴影颜色 */
+  --wt-shadow-deeper: rgba(0, 0, 0, 0.28);       /* 更深阴影颜色 */
+  --wt-shadow-light: rgba(255, 255, 255, 0.06);  /* 浅阴影颜色 */
+
+  /* ===== 水滴圆角 ===== */
+  --wt-radius-xs: 18px 14px 20px 16px / 16px 18px 14px 20px; /* 超小水滴圆角 */
+  --wt-radius-sm: 24px 16px 26px 18px / 18px 24px 16px 26px; /* 小水滴圆角 */
+  --wt-radius-md: 28px 18px 30px 22px / 22px 28px 20px 30px; /* 中等水滴圆角 */
+  --wt-radius-lg: 36px 22px 38px 26px / 26px 36px 22px 38px; /* 大水滴圆角 */
+
+  /* ===== 动效时长 ===== */
+  --wt-motion-normal: 3.5s;  /* 标准液体流动时长 */
+  --wt-motion-slow: 5.5s;    /* 慢速液体流动时长 */
+
+  /* ===== 高光几何 ===== */
+  --wt-highlight-safe-margin: 8px;          /* 高光与组件边缘的安全距离 */
+  --wt-highlight-main-factor: 0.18;         /* 主高光尺寸比例 */
+  --wt-highlight-main-min: 5px;             /* 主高光最小尺寸 */
+  --wt-highlight-main-max: 14px;            /* 主高光最大尺寸 */
+  --wt-highlight-small-factor: 0.09;        /* 次高光尺寸比例 */
+  --wt-highlight-small-min: 3px;            /* 次高光最小尺寸 */
+  --wt-highlight-small-max: 8px;            /* 次高光最大尺寸 */
+  --wt-highlight-size: clamp(6px, 8%, 14px);      /* 主高光实际尺寸 */
+  --wt-highlight-small-size: clamp(4px, 5%, 8px); /* 次高光实际尺寸 */
+  --wt-highlight-radius: 58% 42% 55% 45% / 48% 38% 62% 52%;      /* 主高光椭圆形状 */
+  --wt-highlight-small-radius: 50% 50% 60% 40% / 45% 55% 45% 55%; /* 次高光椭圆形状 */
+
+  /* ===== 按钮扩散效果 ===== */
+  --wt-ripple-enabled: 0;                       /* 扩散效果开关，0 关闭，1 开启 */
+  --wt-ripple-size: 20px;                       /* 扩散点初始尺寸 */
+  --wt-ripple-scale: 9;                         /* 扩散点最大缩放倍数 */
+  --wt-ripple-opacity: 0.45;                    /* 扩散点初始透明度 */
+  --wt-ripple-duration: 600ms;                  /* 扩散动画时长 */
+  --wt-ripple-color: rgba(0, 0, 0, 0.22);       /* 明亮主题扩散点颜色 */
+
+  /* ===== 间距 ===== */
+  --wt-space-xs: 4px;   /* 极小间距 */
+  --wt-space-sm: 8px;   /* 小间距 */
+  --wt-space-md: 16px;  /* 中等间距 */
+  --wt-space-lg: 24px;  /* 大间距 */
+  --wt-space-xl: 32px;  /* 超大间距 */
+
+  /* ===== 字体与文字阴影 ===== */
+  --wt-font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; /* 字体栈 */
+  --wt-text-shadow: 0 1px 2px rgba(255, 255, 255, 0.4); /* 明亮主题文字阴影 */
+}
+
+:root[data-theme='light'] {
+  color-scheme: light; /* 明亮主题原生控件配色 */
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark; /* 暗黑主题原生控件配色 */
+
+  /* ===== 暗黑主题表面色 ===== */
+  --wt-bg: #111821;               /* 页面背景色 */
+  --wt-surface: #18222f;          /* 组件基础表面色 */
+  --wt-surface-strong: #1f2c3b;   /* 组件强调表面色 */
+
+  /* ===== 暗黑主题文本颜色 ===== */
+  --wt-text: #eaf2f8;             /* 主文本颜色 */
+  --wt-text-secondary: #a9b7c6;   /* 次要文本颜色 */
+  --wt-text-placeholder: #718093; /* 占位文本颜色 */
+
+  /* ===== 暗黑主题语义色 ===== */
+  --wt-primary: #6b9fff;          /* 主色 */
+  --wt-primary-soft: rgba(107, 159, 255, 0.18); /* 主色柔化背景 */
+  --wt-success: #72c98a;          /* 成功色 */
+  --wt-warning: #e5ae5a;          /* 警告色 */
+  --wt-danger: #ef7a7a;           /* 危险色 */
+  --wt-info: #9da8e8;             /* 信息色 */
+
+  /* ===== 暗黑主题高光与阴影 ===== */
+  --wt-highlight: rgba(255, 255, 255, 0.32);      /* 主高光颜色 */
+  --wt-highlight-small: rgba(255, 255, 255, 0.2); /* 次高光颜色 */
+  --wt-shadow-dark: rgba(0, 0, 0, 0.46);          /* 深阴影颜色 */
+  --wt-shadow-deeper: rgba(0, 0, 0, 0.62);        /* 更深阴影颜色 */
+  --wt-shadow-light: rgba(255, 255, 255, 0.08);   /* 浅阴影颜色 */
+  --wt-text-shadow: 0 1px 2px rgba(0, 0, 0, 0.18); /* 暗黑主题文字阴影 */
+  --wt-ripple-color: rgba(255, 255, 255, 0.24);   /* 暗黑主题扩散点颜色 */
+}

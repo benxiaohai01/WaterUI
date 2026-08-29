@@ -1,0 +1,7 @@
+@use '@water-ui/theme/src/index.scss';
+
+:root {
+  --wt-app-max-width: 1440px;  /* 文档站最大内容宽度 */
+  --wt-header-height: 64px;    /* 顶部导航高度 */
+  --wt-sidebar-width: 264px;   /* 文档站侧边栏宽度 */
+}

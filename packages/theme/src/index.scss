@@ -1,0 +1,23 @@
+@use './tokens.scss';
+@use './mixins/index.scss';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--wt-font-family);
+  background: var(--wt-bg);
+  color: var(--wt-text);
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: var(--wt-bg);
+  color: var(--wt-text);
+  transition: background 0.25s ease, color 0.25s ease;
+}
