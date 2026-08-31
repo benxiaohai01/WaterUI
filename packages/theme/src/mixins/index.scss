@@ -1,97 +1,202 @@
 @mixin wt-liquid-surface {
+  /* 背景 */
   background: linear-gradient(
     145deg,
     rgba(0, 0, 0, var(--wt-shadow-dark-alpha)),
     rgba(0, 0, 0, var(--wt-shadow-dark-alpha-strong))
   );
+  /* 水滴内外部阴影层次 */
   box-shadow:
     inset 3px 4px 8px rgba(0, 0, 0, 0.15),
     inset -2px -2px 5px var(--wt-shadow-light),
     3px 4px 12px rgba(0, 0, 0, 0.1),
     0 1px 4px rgba(0, 0, 0, 0.06);
+  /* 文本阴影 */
   text-shadow: var(--wt-text-shadow);
 }
 
 @mixin wt-liquid-highlights {
+  /* 定位方式 */
   position: relative;
+  /* 创建独立层叠上下文，隔离内部元素 */
   isolation: isolate;
 
   &::after {
+    /* 伪元素内容 */
     content: '';
+    /* 定位方式 */
     position: absolute;
+    /* 宽度 */
     width: var(--wt-highlight-size, 12px);
+    /* 高度 */
     height: var(--wt-highlight-size, 12px);
-    top: max(var(--wt-highlight-safe-margin), 4px);
-    right: max(var(--wt-highlight-safe-margin), 4px);
+    /* 顶部偏移 */
+    top: var(--wt-highlight-top);
+    /* 右侧偏移 */
+    right: var(--wt-highlight-right);
+    /* 背景 */
     background: var(--wt-highlight);
-    border-radius: 58% 42% 55% 45% / 48% 38% 62% 52%;
+    /* 圆角，塑造水滴/液体轮廓 */
+    border-radius: var(--wt-highlight-radius);
+    /* 是否响应鼠标事件 */
     pointer-events: none;
+    /* 动画 */
     animation: wt-highlight-float var(--wt-motion-normal) ease-in-out infinite;
-    opacity: 0.5;
+    /* 透明度 */
+    opacity: var(--wt-highlight-opacity);
+    /* 层叠层级 */
     z-index: 2;
   }
 
   &::before {
+    /* 伪元素内容 */
     content: '';
+    /* 定位方式 */
     position: absolute;
+    /* 宽度 */
     width: var(--wt-highlight-small-size, 6px);
+    /* 高度 */
     height: var(--wt-highlight-small-size, 6px);
-    top: calc(max(var(--wt-highlight-safe-margin), 4px) + 10px);
-    right: calc(max(var(--wt-highlight-safe-margin), 4px) + 12px);
+    /* 顶部偏移 */
+    top: var(--wt-highlight-small-top);
+    /* 右侧偏移 */
+    right: var(--wt-highlight-small-right);
+    /* 背景 */
     background: var(--wt-highlight-small);
-    border-radius: 50% 50% 60% 40% / 45% 55% 45% 55%;
+    /* 圆角，塑造水滴/液体轮廓 */
+    border-radius: var(--wt-highlight-small-radius);
+    /* 是否响应鼠标事件 */
     pointer-events: none;
+    /* 动画 */
     animation: wt-highlight-float-small var(--wt-motion-slow) ease-in-out infinite;
-    opacity: 0.45;
+    /* 透明度 */
+    opacity: var(--wt-highlight-small-opacity);
+    /* 层叠层级 */
     z-index: 2;
   }
 }
 
 @mixin wt-liquid-animation {
+  /* 动画 */
   animation: wt-liquid-flow var(--wt-motion-normal) ease-in-out infinite;
-  will-change: transform;
+  /* 动画性能提示 */
+  will-change: border-radius;
 }
 
 @keyframes wt-liquid-flow {
-  0%   { transform: scale(1, 1) rotate(0deg); }
-  20%  { transform: scale(1.015, 0.985) rotate(0.15deg); }
-  40%  { transform: scale(0.985, 1.015) rotate(-0.15deg); }
-  60%  { transform: scale(1.01, 0.99) rotate(0.1deg); }
-  80%  { transform: scale(0.99, 1.01) rotate(-0.1deg); }
-  100% { transform: scale(1, 1) rotate(0deg); }
+  0% {
+    /* 圆角，塑造水滴/液体轮廓 */
+    border-radius: var(--wt-radius-md);
+  }
+
+  25% {
+    /* 圆角，塑造水滴/液体轮廓 */
+    border-radius: 24px 32px 26px 34px / 34px 24px 32px 26px;
+  }
+
+  50% {
+    /* 圆角，塑造水滴/液体轮廓 */
+    border-radius: 32px 22px 34px 24px / 24px 32px 22px 34px;
+  }
+
+  75% {
+    /* 圆角，塑造水滴/液体轮廓 */
+    border-radius: 26px 30px 24px 32px / 30px 24px 32px 26px;
+  }
+
+  100% {
+    /* 圆角，塑造水滴/液体轮廓 */
+    border-radius: var(--wt-radius-md);
+  }
 }
 
 @keyframes wt-liquid-flow-subtle {
-  0%   { transform: scale(1, 1) rotate(0deg); }
-  20%  { transform: scale(1.005, 0.995) rotate(0.04deg); }
-  40%  { transform: scale(0.995, 1.005) rotate(-0.04deg); }
-  60%  { transform: scale(1.003, 0.997) rotate(0.03deg); }
-  80%  { transform: scale(0.997, 1.003) rotate(-0.03deg); }
-  100% { transform: scale(1, 1) rotate(0deg); }
+  0% {
+    /* 圆角，塑造水滴/液体轮廓 */
+    border-radius: var(--wt-radius-md);
+  }
+
+  50% {
+    /* 圆角，塑造水滴/液体轮廓 */
+    border-radius: 30px 24px 32px 26px / 26px 30px 24px 32px;
+  }
+
+  100% {
+    /* 圆角，塑造水滴/液体轮廓 */
+    border-radius: var(--wt-radius-md);
+  }
 }
 
 @keyframes wt-highlight-float {
-  0%   { transform: translate(0, 0) scale(1); opacity: 0.5; }
-  25%  { transform: translate(-2px, 2px) scale(0.96); opacity: 0.42; }
-  50%  { transform: translate(2px, -2px) scale(1.04); opacity: 0.62; }
-  75%  { transform: translate(-1px, -1px) scale(0.98); opacity: 0.48; }
-  100% { transform: translate(0, 0) scale(1); opacity: 0.5; }
+  0% {
+    /* 形变 */
+    transform: translate(0, 0) scale(1);
+    /* 透明度 */
+    opacity: var(--wt-highlight-opacity);
+  }
+
+  25% {
+    /* 形变 */
+    transform: translate(-1px, 1px) scale(0.98);
+    /* 透明度 */
+    opacity: var(--wt-highlight-opacity);
+  }
+
+  50% {
+    /* 形变 */
+    transform: translate(1px, -1px) scale(1.02);
+    /* 透明度 */
+    opacity: var(--wt-highlight-opacity);
+  }
+
+  75% {
+    /* 形变 */
+    transform: translate(-0.5px, -0.5px) scale(0.99);
+    /* 透明度 */
+    opacity: var(--wt-highlight-opacity);
+  }
+
+  100% {
+    /* 形变 */
+    transform: translate(0, 0) scale(1);
+    /* 透明度 */
+    opacity: var(--wt-highlight-opacity);
+  }
 }
 
 @keyframes wt-highlight-float-small {
-  0%   { transform: translate(0, 0) scale(1); opacity: 0.46; }
-  25%  { transform: translate(2px, -2px) scale(1.06); opacity: 0.38; }
-  50%  { transform: translate(-2px, 2px) scale(0.94); opacity: 0.56; }
-  75%  { transform: translate(1px, -1px) scale(1.02); opacity: 0.42; }
-  100% { transform: translate(0, 0) scale(1); opacity: 0.46; }
-}
+  0% {
+    /* 形变 */
+    transform: translate(0, 0) scale(1);
+    /* 透明度 */
+    opacity: var(--wt-highlight-small-opacity);
+  }
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+  25% {
+    /* 形变 */
+    transform: translate(1px, -1px) scale(1.02);
+    /* 透明度 */
+    opacity: var(--wt-highlight-small-opacity);
+  }
+
+  50% {
+    /* 形变 */
+    transform: translate(-1px, 1px) scale(0.98);
+    /* 透明度 */
+    opacity: var(--wt-highlight-small-opacity);
+  }
+
+  75% {
+    /* 形变 */
+    transform: translate(0.5px, 0.5px) scale(1.01);
+    /* 透明度 */
+    opacity: var(--wt-highlight-small-opacity);
+  }
+
+  100% {
+    /* 形变 */
+    transform: translate(0, 0) scale(1);
+    /* 透明度 */
+    opacity: var(--wt-highlight-small-opacity);
   }
 }

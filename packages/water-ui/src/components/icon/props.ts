@@ -14,6 +14,19 @@ export type IconName =
   | 'code'
   | 'external'
   | 'home'
+  | 'star'
+  | 'info'
+  | 'warning'
+  | 'error'
+  | 'question'
+  | 'notification'
+  | 'loading'
+  | 'minus'
+  | 'plus'
+  | 'refresh-left'
+  | 'refresh-right'
+  | 'fullscreen'
+  | 'bell'
 
 export interface IconProps {
   name: IconName

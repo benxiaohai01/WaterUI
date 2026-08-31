@@ -126,15 +126,12 @@ app.use(WaterUI)`
   aspect-ratio: 1;
   margin: auto;
   border-radius: 41% 59% 70% 30% / 39% 49% 51% 61%;
-  background: linear-gradient(
-    145deg,
-    color-mix(in srgb, var(--wt-primary) 88%, white),
-    color-mix(in srgb, var(--wt-primary) 68%, #062b57)
-  );
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--wt-primary) 26%, transparent);
   box-shadow:
-    inset 14px 24px 40px rgba(0, 0, 0, 0.28),
-    inset -12px -14px 30px rgba(255, 255, 255, 0.35),
-    18px 26px 55px color-mix(in srgb, var(--wt-primary) 30%, transparent);
+    inset 14px 24px 40px rgba(0, 0, 0, 0.18),
+    inset -12px -14px 30px rgba(255, 255, 255, 0.5),
+    18px 26px 55px rgba(0, 0, 0, 0.12);
   animation: home-drop 5s ease-in-out infinite alternate;
 }
 
@@ -146,7 +143,8 @@ app.use(WaterUI)`
   height: 38px;
   border-radius: 48% 52% 79% 21% / 46% 25% 75% 54%;
   background: rgba(255, 255, 255, 0.86);
-  filter: blur(0.2px);
+  animation: home-highlight-wobble 4.6s ease-in-out infinite;
+  will-change: transform;
 }
 
 .home__drop-highlight--small {
@@ -155,6 +153,8 @@ app.use(WaterUI)`
   width: 15px;
   height: 15px;
   background: rgba(255, 255, 255, 0.78);
+  animation-duration: 3.6s;
+  animation-delay: 0.8s;
 }
 
 .home__features {
@@ -214,6 +214,28 @@ app.use(WaterUI)`
   0% { border-radius: 41% 59% 70% 30% / 39% 49% 51% 61%; transform: scale(1) rotate(0deg); }
   50% { border-radius: 63% 37% 58% 42% / 40% 48% 52% 60%; transform: scale(1.02, 0.98) rotate(1deg); }
   100% { border-radius: 54% 46% 70% 30% / 34% 40% 60% 66%; transform: scale(0.99, 1.01) rotate(-1deg); }
+}
+
+@keyframes home-highlight-wobble {
+  0% {
+    transform: translate(0, 0) scale(1) rotate(0deg);
+  }
+
+  25% {
+    transform: translate(-3px, 2px) scale(1.04) rotate(-4deg);
+  }
+
+  50% {
+    transform: translate(2px, -2px) scale(0.96) rotate(4deg);
+  }
+
+  75% {
+    transform: translate(-1px, -1px) scale(1.02) rotate(-2deg);
+  }
+
+  100% {
+    transform: translate(0, 0) scale(1) rotate(0deg);
+  }
 }
 
 @media (max-width: 860px) {

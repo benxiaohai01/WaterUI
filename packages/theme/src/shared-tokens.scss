@@ -1,0 +1,83 @@
+:root {
+  /* 水滴圆角令牌 */
+  --wt-radius-xs: 18px 14px 20px 16px / 16px 18px 14px 20px;
+  /* 水滴圆角令牌 */
+  --wt-radius-sm: 24px 16px 26px 18px / 18px 24px 16px 26px;
+  /* 水滴圆角令牌 */
+  --wt-radius-md: 28px 18px 30px 22px / 22px 28px 20px 30px;
+  /* 水滴圆角令牌 */
+  --wt-radius-lg: 36px 22px 38px 26px / 26px 36px 22px 38px;
+
+  /* 标准动画时长令牌 */
+  --wt-motion-normal: 3.8s;
+  /* 慢速动画时长令牌 */
+  --wt-motion-slow: 5.8s;
+
+  /* 高光安全边距 */
+  --wt-highlight-safe-margin: 8px;
+  /* 主高光尺寸比例 */
+  --wt-highlight-main-factor: 0.18;
+  /* 主高光最小尺寸 */
+  --wt-highlight-main-min: 5px;
+  /* 主高光最大尺寸 */
+  --wt-highlight-main-max: 14px;
+  /* 次高光尺寸比例 */
+  --wt-highlight-small-factor: 0.09;
+  /* 次高光最小尺寸 */
+  --wt-highlight-small-min: 3px;
+  /* 次高光最大尺寸 */
+  --wt-highlight-small-max: 8px;
+  /* 高光基准尺寸 */
+  --wt-highlight-size-base: 12px;
+  /* 主次高光间距 */
+  --wt-highlight-group-gap: 4px;
+  /* 高光内边距 */
+  --wt-highlight-inset: min(var(--wt-highlight-offset), 10px);
+  /* 高光尺寸 */
+  --wt-highlight-size: min(var(--wt-highlight-size-base), 14px);
+  /* 次高光尺寸 */
+  --wt-highlight-small-size: min(calc(var(--wt-highlight-size-base) * 0.5), 8px);
+  /* 主高光水滴圆角 */
+  --wt-highlight-radius: 58% 42% 55% 45% / 48% 38% 62% 52%;
+  /* 次高光水滴圆角 */
+  --wt-highlight-small-radius: 50% 50% 60% 40% / 45% 55% 45% 55%;
+  /* 高光整体偏移 */
+  --wt-highlight-offset: max(var(--wt-highlight-safe-margin), 4px);
+  /* 高光顶部定位 */
+  --wt-highlight-top: min(var(--wt-highlight-inset), calc(100% - var(--wt-highlight-size) - 4px));
+  /* 高光右侧定位 */
+  --wt-highlight-right: min(var(--wt-highlight-inset), calc(100% - var(--wt-highlight-size) - 4px));
+  /* 次高光顶部定位 */
+  --wt-highlight-small-top: min(calc(var(--wt-highlight-top) + var(--wt-highlight-size) + var(--wt-highlight-group-gap)), calc(100% - var(--wt-highlight-small-size) - 4px));
+  /* 次高光右侧定位 */
+  --wt-highlight-small-right: min(calc(var(--wt-highlight-right) + var(--wt-highlight-size) + var(--wt-highlight-group-gap)), calc(100% - var(--wt-highlight-small-size) - 4px));
+  /* 主高光透明度 */
+  --wt-highlight-opacity: 0.78;
+  /* 次高光透明度 */
+  --wt-highlight-small-opacity: 0.68;
+
+  /* 涟漪效果开关 */
+  --wt-ripple-enabled: 0;
+  /* 涟漪初始尺寸 */
+  --wt-ripple-size: 20px;
+  /* 涟漪最大缩放倍数 */
+  --wt-ripple-scale: 9;
+  /* 涟漪透明度 */
+  --wt-ripple-opacity: 0.45;
+  /* 涟漪动画时长 */
+  --wt-ripple-duration: 600ms;
+
+  /* 间距令牌 */
+  --wt-space-xs: 4px;
+  /* 间距令牌 */
+  --wt-space-sm: 8px;
+  /* 间距令牌 */
+  --wt-space-md: 16px;
+  /* 间距令牌 */
+  --wt-space-lg: 24px;
+  /* 间距令牌 */
+  --wt-space-xl: 32px;
+
+  /* 字体令牌 */
+  --wt-font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}

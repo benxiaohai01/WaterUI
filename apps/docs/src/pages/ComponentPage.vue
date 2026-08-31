@@ -64,27 +64,27 @@ const demoProps = computed(() => {
         </div>
 
         <div v-if="name === 'button'" class="token-panel__grid">
-          <label class="token-control token-control--switch">
+          <div class="token-control token-control--switch">
             <span>按钮扩散效果</span>
             <wt-switch v-model="rippleEnabled" />
-          </label>
+          </div>
 
-          <label class="token-control">
+          <div class="token-control">
             <span>扩散透明度</span>
             <wt-slider v-model="rippleOpacity" :min="0.1" :max="0.9" :step="0.05" show-value />
-          </label>
+          </div>
 
-          <label class="token-control">
+          <div class="token-control">
             <span>扩散范围</span>
             <wt-slider v-model="rippleScale" :min="4" :max="16" :step="1" show-value />
-          </label>
+          </div>
         </div>
 
         <div v-else class="token-panel__grid">
-          <label class="token-control token-control--switch">
+          <div class="token-control token-control--switch">
             <span>水滴包裹</span>
             <wt-switch v-model="iconWrapped" />
-          </label>
+          </div>
         </div>
       </section>
 

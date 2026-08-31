@@ -13,13 +13,14 @@
       "require": "./dist/water-ui.umd.cjs"
     },
     "./style.css": "./src/styles/index.scss",
-    "./components/*": "./src/components/*"
+    "./components/*": "./src/components/*",
+    "./components/*/style.css": "./dist/components/*.css"
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && vite build -c vite.components.config.ts",
     "typecheck": "vue-tsc --noEmit",
     "lint": "echo 'no lint for components'",
     "test": "echo 'no test for components'"

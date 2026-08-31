@@ -1,6 +1,6 @@
 ---
 name: water-ui-component-design
-description: Design and implement Water UI Vue 3 components in this repository. Use when creating, modifying, or reviewing components, theme tokens, demos, or docs pages so they follow the water-drop visual system and shared API conventions.
+description: Always use when creating, modifying, or reviewing Water UI Vue 3 components, theme tokens, demos, or docs pages in this repository so they follow the water-drop visual system, Alibaba front-end code standards, and shared API conventions.
 ---
 
 # Water UI Component Design
@@ -67,6 +67,13 @@ const emit = defineEmits<{
 </script>
 ```
 
+## Code Standards
+
+All Vue, TypeScript, Sass, and JavaScript code in Water UI must follow the [Alibaba Front-end Coding Guidelines](https://github.com/alibaba/f2e-spec).
+
+- Use `eslint-config-ali` as the shared ESLint baseline.
+- For Vue 3 + TypeScript code, use the Vue/TypeScript configuration exported by `eslint-config-ali`; do not introduce a parallel style convention.
+- Keep the component API and naming rules above consistent with these guidelines.
 ## Water-Drop Visual System
 
 The visual language is the core product constraint, not a per-component decoration.

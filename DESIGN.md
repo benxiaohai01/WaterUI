@@ -1,4 +1,4 @@
-# 水滴组件库设计文档
+﻿﻿# 水滴组件库设计文档
 
 ## 1. 项目定位
 
@@ -39,9 +39,9 @@
 
 每个组件只负责一个清晰的行为边界。例如：
 
-- `WdButton` 只负责交互触发，不负责业务逻辑。
-- `WdInput` 只负责文本输入，不负责表单校验。
-- `WdFormItem` 只负责单项字段的布局、label 和错误信息展示。
+- `WtButton` 只负责交互触发，不负责业务逻辑。
+- `WtInput` 只负责文本输入，不负责表单校验。
+- `WtFormItem` 只负责单项字段的布局、label 和错误信息展示。
 - 弹层、滚动、主题等通用能力下沉到 composables 或 directives。
 
 ### 3.2 可组合性
@@ -55,8 +55,8 @@
 
 ### 3.3 一致性
 
-- 组件前缀统一为 `wd`。
-- 组件标签统一为 `wd-xxx`。
+- 组件前缀统一为 `wt`。
+- 组件标签统一为 `wt-xxx`。
 - props 使用 camelCase，事件使用 kebab-case。
 - 尺寸枚举统一为 `small`、`medium`、`large`。
 - 状态统一支持 `disabled`、`loading`、`readonly`。
@@ -154,7 +154,7 @@ docs
 目标：
 
 - 支持完整引入 `app.use(WaterDropUI)`。
-- 支持按需引入单个组件，例如 `import { WdButton } from '@water-drop/components/button'`。
+- 支持按需引入单个组件，例如 `import { WtButton } from '@water-drop/components/button'`。
 - CSS 可按需加载，也可一次加载全量主题。
 
 ## 5. 水滴视觉语言
@@ -164,43 +164,43 @@ docs
 参考 `waterCompenent.html` 中已有的核心变量，扩展为完整 token 体系：
 
 ```scss
---wd-bg: #eceff3;
---wd-surface: #f2f5f8;
---wd-surface-strong: #e6ebf0;
+--wt-bg: #eceff3;
+--wt-surface: #f2f5f8;
+--wt-surface-strong: #e6ebf0;
 
---wd-text: #222222;
---wd-text-secondary: #666666;
---wd-text-placeholder: #999999;
+--wt-text: #222222;
+--wt-text-secondary: #666666;
+--wt-text-placeholder: #999999;
 
---wd-primary: #3d7eff;
---wd-success: #2e7d32;
---wd-warning: #c47a00;
---wd-danger: #c62828;
---wd-info: #5c6bc0;
+--wt-primary: #3d7eff;
+--wt-success: #2e7d32;
+--wt-warning: #c47a00;
+--wt-danger: #c62828;
+--wt-info: #5c6bc0;
 
---wd-shadow-dark-alpha: 0.04;
---wd-shadow-dark-alpha-strong: 0.06;
---wd-highlight: rgba(255, 255, 255, 1);
---wd-highlight-small: rgba(255, 255, 255, 0.85);
---wd-shadow-dark: rgba(0, 0, 0, 0.18);
---wd-shadow-deeper: rgba(0, 0, 0, 0.28);
---wd-shadow-light: rgba(255, 255, 255, 0.06);
+--wt-shadow-dark-alpha: 0.04;
+--wt-shadow-dark-alpha-strong: 0.06;
+--wt-highlight: rgba(255, 255, 255, 1);
+--wt-highlight-small: rgba(255, 255, 255, 0.85);
+--wt-shadow-dark: rgba(0, 0, 0, 0.18);
+--wt-shadow-deeper: rgba(0, 0, 0, 0.28);
+--wt-shadow-light: rgba(255, 255, 255, 0.06);
 
---wd-radius-xs: 18px 14px 20px 16px / 16px 18px 14px 20px;
---wd-radius-sm: 24px 16px 26px 18px / 18px 24px 16px 26px;
---wd-radius-md: 28px 18px 30px 22px / 22px 28px 20px 30px;
---wd-radius-lg: 36px 22px 38px 26px / 26px 36px 22px 38px;
+--wt-radius-xs: 18px 14px 20px 16px / 16px 18px 14px 20px;
+--wt-radius-sm: 24px 16px 26px 18px / 18px 24px 16px 26px;
+--wt-radius-md: 28px 18px 30px 22px / 22px 28px 20px 30px;
+--wt-radius-lg: 36px 22px 38px 26px / 26px 36px 22px 38px;
 
---wd-motion-normal: 3.5s;
---wd-motion-slow: 5.5s;
+--wt-motion-normal: 3.5s;
+--wt-motion-slow: 5.5s;
 
---wd-highlight-safe-margin: 8px;
---wd-highlight-main-factor: 0.18;
---wd-highlight-main-min: 5px;
---wd-highlight-main-max: 14px;
---wd-highlight-small-factor: 0.09;
---wd-highlight-small-min: 3px;
---wd-highlight-small-max: 8px;
+--wt-highlight-safe-margin: 8px;
+--wt-highlight-main-factor: 0.18;
+--wt-highlight-main-min: 5px;
+--wt-highlight-main-max: 14px;
+--wt-highlight-small-factor: 0.09;
+--wt-highlight-small-min: 3px;
+--wt-highlight-small-max: 8px;
 ```
 
 token 覆盖：
@@ -221,10 +221,10 @@ token 覆盖：
 
 ```scss
 // 基准水滴形状
---wd-radius-md: 28px 18px 30px 22px / 22px 28px 20px 30px;
+--wt-radius-md: 28px 18px 30px 22px / 22px 28px 20px 30px;
 
 // hover 时形状轻微变化
---wd-radius-md-hover: 18px 30px 22px 28px / 30px 22px 28px 18px;
+--wt-radius-md-hover: 18px 30px 22px 28px / 30px 22px 28px 18px;
 ```
 
 不同组件根据自身尺寸映射不同圆角层级，但整体视觉仍属于同一水滴系统。
@@ -239,17 +239,17 @@ token 覆盖：
 高光尺寸使用 `clamp()` 和 `max()` 限制在组件内部，避免溢出：
 
 ```scss
-.wd-button::after {
+.wt-button::after {
   width: clamp(
-    var(--wd-highlight-main-min),
-    calc(var(--wd-highlight-main-factor) * 100%),
-    var(--wd-highlight-main-max)
+    var(--wt-highlight-main-min),
+    calc(var(--wt-highlight-main-factor) * 100%),
+    var(--wt-highlight-main-max)
   );
-  height: var(--wd-highlight-size);
-  top: max(var(--wd-highlight-safe-margin), 4px);
-  right: max(var(--wd-highlight-safe-margin), 4px);
+  height: var(--wt-highlight-size);
+  top: max(var(--wt-highlight-safe-margin), 4px);
+  right: max(var(--wt-highlight-safe-margin), 4px);
   border-radius: 58% 42% 55% 45% / 48% 38% 62% 52%;
-  background: var(--wd-highlight);
+  background: var(--wt-highlight);
 }
 ```
 
@@ -280,7 +280,7 @@ box-shadow:
 核心动画只作用于 `transform`、`opacity`、`border-radius`，尽量不触发布局：
 
 ```scss
-@keyframes wd-liquid-flow {
+@keyframes wt-liquid-flow {
   0%   { transform: scale(1, 1) rotate(0deg); }
   20%  { transform: scale(1.015, 0.985) rotate(0.15deg); }
   40%  { transform: scale(0.985, 1.015) rotate(-0.15deg); }
@@ -319,7 +319,7 @@ box-shadow:
 
 ### 6.2 CSS 自定义属性
 
-所有组件样式引用 `var(--wd-*)`，不在组件内部硬编码具体颜色。
+所有组件样式引用 `var(--wt-*)`，不在组件内部硬编码具体颜色。
 
 Sass 变量与 map 只用于源码组织，最终编译为 CSS 自定义属性。
 
@@ -340,7 +340,7 @@ Sass 变量与 map 只用于源码组织，最终编译为 CSS 自定义属性�
 组件库同时支持：
 
 - `document.documentElement.dataset.theme`
-- `WdConfigProvider` 局部主题
+- `WtConfigProvider` 局部主题
 - 跟随系统 `prefers-color-scheme`
 
 ### 6.4 一键换肤
@@ -357,9 +357,9 @@ import './my-theme.css'
 
 ```css
 :root {
-  --wd-primary: #00bcd4;
-  --wd-radius-md: 40% 60% 70% 30% / 39% 49% 51% 61%;
-  --wd-motion-normal: 4s;
+  --wt-primary: #00bcd4;
+  --wt-radius-md: 40% 60% 70% 30% / 39% 49% 51% 61%;
+  --wt-motion-normal: 4s;
 }
 ```
 
@@ -371,8 +371,8 @@ import './my-theme.css'
 
 ```text
 组件文件：Button.vue
-组件名称：WdButton
-标签名称：<wd-button />
+组件名称：WtButton
+标签名称：<wt-button />
 类型名称：ButtonProps
 ```
 
@@ -407,9 +407,9 @@ clear
 对表单类组件统一支持：
 
 ```vue
-<wd-input v-model="value" />
-<wd-switch v-model="checked" />
-<wd-select v-model="selected" />
+<wt-input v-model="value" />
+<wt-switch v-model="checked" />
+<wt-select v-model="selected" />
 ```
 
 ### 7.5 Slots
@@ -453,116 +453,116 @@ clear
 
 | 组件 | 标签 | 说明 |
 | --- | --- | --- |
-| Button | `wd-button` | 水滴按钮，支持类型、尺寸、loading、禁用、图标 |
-| Icon | `wd-icon` | 统一图标入口，支持 SVG 与外部图标库 |
-| Link | `wd-link` | 链接 |
-| Text | `wd-text` | 文本排版 |
-| Divider | `wd-divider` | 分割线 |
-| Badge | `wd-badge` | 徽标 |
-| Tag | `wd-tag` | 水滴标签，支持关闭与状态色 |
-| Avatar | `wd-avatar` | 头像 |
+| Button | `wt-button` | 水滴按钮，支持类型、尺寸、loading、禁用、图标 |
+| Icon | `wt-icon` | 统一图标入口，支持 SVG 与外部图标库 |
+| Link | `wt-link` | 链接 |
+| Text | `wt-text` | 文本排版 |
+| Divider | `wt-divider` | 分割线 |
+| Badge | `wt-badge` | 徽标 |
+| Tag | `wt-tag` | 水滴标签，支持关闭与状态色 |
+| Avatar | `wt-avatar` | 头像 |
 
 ### 8.2 布局组件
 
 | 组件 | 标签 | 说明 |
 | --- | --- | --- |
-| Layout | `wd-layout` | 页面整体布局 |
-| Header | `wd-header` | 顶部区域 |
-| Aside | `wd-aside` | 侧边区域 |
-| Main | `wd-main` | 主内容区域 |
-| Footer | `wd-footer` | 底部区域 |
-| Row | `wd-row` | 栅格行 |
-| Col | `wd-col` | 栅格列 |
-| Space | `wd-space` | 间距容器 |
-| Scrollbar | `wd-scrollbar` | 自定义滚动条 |
-| Splitter | `wd-splitter` | 可拖动分割面板 |
+| Layout | `wt-layout` | 页面整体布局 |
+| Header | `wt-header` | 顶部区域 |
+| Aside | `wt-aside` | 侧边区域 |
+| Main | `wt-main` | 主内容区域 |
+| Footer | `wt-footer` | 底部区域 |
+| Row | `wt-row` | 栅格行 |
+| Col | `wt-col` | 栅格列 |
+| Space | `wt-space` | 间距容器 |
+| Scrollbar | `wt-scrollbar` | 自定义滚动条 |
+| Splitter | `wt-splitter` | 可拖动分割面板 |
 
 ### 8.3 导航组件
 
 | 组件 | 标签 | 说明 |
 | --- | --- | --- |
-| Menu | `wd-menu` | 导航菜单 |
-| MenuItem | `wd-menu-item` | 菜单项 |
-| SubMenu | `wd-sub-menu` | 子菜单 |
-| Tabs | `wd-tabs` | 标签页 |
-| TabPane | `wd-tab-pane` | 标签页面板 |
-| Breadcrumb | `wd-breadcrumb` | 面包屑 |
-| Dropdown | `wd-dropdown` | 下拉菜单 |
-| Steps | `wd-steps` | 步骤条 |
-| Step | `wd-step` | 步骤项 |
-| PageHeader | `wd-page-header` | 页头 |
-| Anchor | `wd-anchor` | 锚点 |
-| Affix | `wd-affix` | 固定定位 |
-| BackTop | `wd-back-top` | 返回顶部 |
+| Menu | `wt-menu` | 导航菜单 |
+| MenuItem | `wt-menu-item` | 菜单项 |
+| SubMenu | `wt-sub-menu` | 子菜单 |
+| Tabs | `wt-tabs` | 标签页 |
+| TabPane | `wt-tab-pane` | 标签页面板 |
+| Breadcrumb | `wt-breadcrumb` | 面包屑 |
+| Dropdown | `wt-dropdown` | 下拉菜单 |
+| Steps | `wt-steps` | 步骤条 |
+| Step | `wt-step` | 步骤项 |
+| PageHeader | `wt-page-header` | 页头 |
+| Anchor | `wt-anchor` | 锚点 |
+| Affix | `wt-affix` | 固定定位 |
+| BackTop | `wt-back-top` | 返回顶部 |
 
 ### 8.4 表单组件
 
 | 组件 | 标签 | 说明 |
 | --- | --- | --- |
-| Form | `wd-form` | 表单容器，支持校验 |
-| FormItem | `wd-form-item` | 表单项 |
-| Input | `wd-input` | 输入框 |
-| Textarea | `wd-textarea` | 多行输入 |
-| InputNumber | `wd-input-number` | 数字输入 |
-| Autocomplete | `wd-autocomplete` | 自动补全 |
-| Select | `wd-select` | 下拉选择 |
-| Option | `wd-option` | 选项 |
-| Cascader | `wd-cascader` | 级联选择 |
-| Checkbox | `wd-checkbox` | 复选框 |
-| Radio | `wd-radio` | 单选框 |
-| Switch | `wd-switch` | 水滴开关 |
-| Slider | `wd-slider` | 滑块 |
-| DatePicker | `wd-date-picker` | 日期选择 |
-| TimePicker | `wd-time-picker` | 时间选择 |
-| Upload | `wd-upload` | 上传 |
-| Rate | `wd-rate` | 评分 |
-| ColorPicker | `wd-color-picker` | 颜色选择 |
-| Transfer | `wd-transfer` | 穿梭框 |
+| Form | `wt-form` | 表单容器，支持校验 |
+| FormItem | `wt-form-item` | 表单项 |
+| Input | `wt-input` | 输入框 |
+| Textarea | `wt-textarea` | 多行输入 |
+| InputNumber | `wt-input-number` | 数字输入 |
+| Autocomplete | `wt-autocomplete` | 自动补全 |
+| Select | `wt-select` | 下拉选择 |
+| Option | `wt-option` | 选项 |
+| Cascader | `wt-cascader` | 级联选择 |
+| Checkbox | `wt-checkbox` | 复选框 |
+| Radio | `wt-radio` | 单选框 |
+| Switch | `wt-switch` | 水滴开关 |
+| Slider | `wt-slider` | 滑块 |
+| DatePicker | `wt-date-picker` | 日期选择 |
+| TimePicker | `wt-time-picker` | 时间选择 |
+| Upload | `wt-upload` | 上传 |
+| Rate | `wt-rate` | 评分 |
+| ColorPicker | `wt-color-picker` | 颜色选择 |
+| Transfer | `wt-transfer` | 穿梭框 |
 
 ### 8.5 数据展示组件
 
 | 组件 | 标签 | 说明 |
 | --- | --- | --- |
-| Table | `wd-table` | 表格 |
-| Pagination | `wd-pagination` | 分页 |
-| Tree | `wd-tree` | 树形控件 |
-| Card | `wd-card` | 卡片 |
-| Carousel | `wd-carousel` | 走马灯 |
-| Collapse | `wd-collapse` | 折叠面板 |
-| Timeline | `wd-timeline` | 时间线 |
-| Descriptions | `wd-descriptions` | 描述列表 |
-| Empty | `wd-empty` | 空状态 |
-| Result | `wd-result` | 结果页 |
-| Statistic | `wd-statistic` | 统计数值 |
-| Calendar | `wd-calendar` | 日历 |
-| Skeleton | `wd-skeleton` | 骨架屏 |
-| Progress | `wd-progress` | 进度条 |
-| Image | `wd-image` | 图片 |
+| Table | `wt-table` | 表格 |
+| Pagination | `wt-pagination` | 分页 |
+| Tree | `wt-tree` | 树形控件 |
+| Card | `wt-card` | 卡片 |
+| Carousel | `wt-carousel` | 走马灯 |
+| Collapse | `wt-collapse` | 折叠面板 |
+| Timeline | `wt-timeline` | 时间线 |
+| Descriptions | `wt-descriptions` | 描述列表 |
+| Empty | `wt-empty` | 空状态 |
+| Result | `wt-result` | 结果页 |
+| Statistic | `wt-statistic` | 统计数值 |
+| Calendar | `wt-calendar` | 日历 |
+| Skeleton | `wt-skeleton` | 骨架屏 |
+| Progress | `wt-progress` | 进度条 |
+| Image | `wt-image` | 图片 |
 
 ### 8.6 反馈组件
 
 | 组件 | 标签 | 说明 |
 | --- | --- | --- |
-| Alert | `wd-alert` | 警告提示 |
-| Loading | `wd-loading` | 加载状态 |
-| Message | `wd-message` | 全局消息 |
-| MessageBox | `wd-message-box` | 消息弹框 |
-| Notification | `wd-notification` | 通知 |
-| Dialog | `wd-dialog` | 对话框 |
-| Drawer | `wd-drawer` | 抽屉 |
-| Tooltip | `wd-tooltip` | 文字提示 |
-| Popover | `wd-popover` | 气泡卡片 |
-| Popconfirm | `wd-popconfirm` | 气泡确认 |
+| Alert | `wt-alert` | 警告提示 |
+| Loading | `wt-loading` | 加载状态 |
+| Message | `wt-message` | 全局消息 |
+| MessageBox | `wt-message-box` | 消息弹框 |
+| Notification | `wt-notification` | 通知 |
+| Dialog | `wt-dialog` | 对话框 |
+| Drawer | `wt-drawer` | 抽屉 |
+| Tooltip | `wt-tooltip` | 文字提示 |
+| Popover | `wt-popover` | 气泡卡片 |
+| Popconfirm | `wt-popconfirm` | 气泡确认 |
 
 ### 8.7 高级与配置组件
 
 | 组件 | 标签 | 说明 |
 | --- | --- | --- |
-| ConfigProvider | `wd-config-provider` | 全局配置 |
-| VirtualList | `wd-virtual-list` | 虚拟列表 |
-| Watermark | `wd-watermark` | 水印 |
-| Tour | `wd-tour` | 分步引导 |
-| ImageViewer | `wd-image-viewer` | 图片预览 |
+| ConfigProvider | `wt-config-provider` | 全局配置 |
+| VirtualList | `wt-virtual-list` | 虚拟列表 |
+| Watermark | `wt-watermark` | 水印 |
+| Tour | `wt-tour` | 分步引导 |
+| ImageViewer | `wt-image-viewer` | 图片预览 |
 
 ## 9. 文档站设计
 
@@ -733,7 +733,7 @@ button/
 组件 SFC 采用：
 
 - `<script setup lang="ts">`
-- `defineOptions({ name: 'WdButton' })`
+- `defineOptions({ name: 'WtButton' })`
 - `withDefaults(defineProps<ButtonProps>(), defaults)`
 - `defineEmits<ButtonEmits>()`
 - 明确导出 `ButtonProps`

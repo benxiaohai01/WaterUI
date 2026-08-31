@@ -11,7 +11,7 @@ export interface FormRule {
 }
 
 export interface FormProps {
-  model?: Record<string, unknown>
+  modelValue?: Record<string, unknown>
   rules?: Record<string, FormRule | FormRule[]>
   labelWidth?: string
   labelPosition?: 'left' | 'top'

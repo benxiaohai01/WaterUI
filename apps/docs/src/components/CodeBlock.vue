@@ -11,15 +11,40 @@ const props = defineProps<{
 const copied = ref(false)
 const expanded = ref(false)
 
+const fallbackCopy = (text: string) => {
+  const textarea = document.createElement('textarea')
+  textarea.value = text
+  textarea.style.position = 'fixed'
+  textarea.style.top = '0'
+  textarea.style.left = '0'
+  textarea.style.opacity = '0'
+  textarea.style.pointerEvents = 'none'
+  document.body.appendChild(textarea)
+  textarea.focus()
+  textarea.select()
+  const result = document.execCommand('copy')
+  document.body.removeChild(textarea)
+  return result
+}
+
 const copy = async () => {
+  let copiedSuccessfully = false
   try {
-    await navigator.clipboard.writeText(props.code)
-    copied.value = true
-    window.setTimeout(() => {
-      copied.value = false
-    }, 1500)
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(props.code)
+      copiedSuccessfully = true
+    } else {
+      copiedSuccessfully = fallbackCopy(props.code)
+    }
   } catch {
-    copied.value = false
+    copiedSuccessfully = fallbackCopy(props.code)
+  } finally {
+    copied.value = copiedSuccessfully
+    if (copiedSuccessfully) {
+      window.setTimeout(() => {
+        copied.value = false
+      }, 1500)
+    }
   }
 }
 </script>

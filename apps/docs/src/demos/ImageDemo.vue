@@ -1,0 +1,11 @@
+<template>
+  <wt-image
+    src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=600&q=80"
+    alt="水滴风景"
+    width="320px"
+    height="200px"
+    fit="cover"
+    radius="medium"
+    preview
+  />
+</template>

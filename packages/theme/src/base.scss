@@ -1,0 +1,32 @@
+@use './shared-tokens.scss';
+
+*,
+*::before,
+*::after {
+  /* 盒模型尺寸计算方式 */
+  box-sizing: border-box;
+}
+
+html {
+  /* 字体族 */
+  font-family: var(--wt-font-family);
+  /* 背景 */
+  background: var(--wt-bg);
+  /* 文本颜色 */
+  color: var(--wt-text);
+}
+
+body {
+  /* 外边距 */
+  margin: 0;
+  /* 最小宽度 */
+  min-width: 320px;
+  /* 最小高度 */
+  min-height: 100vh;
+  /* 背景 */
+  background: var(--wt-bg);
+  /* 文本颜色 */
+  color: var(--wt-text);
+  /* 过渡动画 */
+  transition: background 0.25s ease, color 0.25s ease;
+}

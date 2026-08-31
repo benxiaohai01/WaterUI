@@ -2,8 +2,10 @@
 import { computed } from 'vue'
 import type { SpaceProps } from './props'
 
+/* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtSpace' })
 
+/* 声明组件入参与默认值 */
 const props = withDefaults(defineProps<SpaceProps>(), {
   direction: 'horizontal',
   size: 12,
@@ -12,6 +14,7 @@ const props = withDefaults(defineProps<SpaceProps>(), {
   justify: 'start'
 })
 
+/* 派生状态（计算属性） */
 const classes = computed(() => [
   'wt-space',
   `wt-space--${props.direction}`,
@@ -29,31 +32,66 @@ const gap = computed(() => typeof props.size === 'number' ? `${props.size}px` : 
     <slot />
   </div>
 </template>
-
 <style scoped lang="scss">
 .wt-space {
+  /* 盒模型显示方式 */
   display: flex;
+  /* 交叉轴对齐方式 */
   align-items: center;
+  /* 主轴内容分配方式 */
   justify-content: flex-start;
 }
 
 .wt-space--vertical {
+  /* 弹性布局主轴方向 */
   flex-direction: column;
+  /* 交叉轴对齐方式 */
   align-items: flex-start;
 }
 
 .wt-space.is-wrap {
+  /* 弹性项是否换行 */
   flex-wrap: wrap;
 }
 
-.wt-space--align-start { align-items: flex-start; }
-.wt-space--align-center { align-items: center; }
-.wt-space--align-end { align-items: flex-end; }
-.wt-space--align-baseline { align-items: baseline; }
-.wt-space--justify-start { justify-content: flex-start; }
-.wt-space--justify-center { justify-content: center; }
-.wt-space--justify-end { justify-content: flex-end; }
-.wt-space--justify-between { justify-content: space-between; }
-.wt-space--justify-around { justify-content: space-around; }
-.wt-space--justify-evenly { justify-content: space-evenly; }
+.wt-space--align-start {
+/* 交叉轴对齐方式 */
+align-items: flex-start;
+}
+.wt-space--align-center {
+/* 交叉轴对齐方式 */
+align-items: center;
+}
+.wt-space--align-end {
+/* 交叉轴对齐方式 */
+align-items: flex-end;
+}
+.wt-space--align-baseline {
+/* 交叉轴对齐方式 */
+align-items: baseline;
+}
+.wt-space--justify-start {
+/* 主轴内容分配方式 */
+justify-content: flex-start;
+}
+.wt-space--justify-center {
+/* 主轴内容分配方式 */
+justify-content: center;
+}
+.wt-space--justify-end {
+/* 主轴内容分配方式 */
+justify-content: flex-end;
+}
+.wt-space--justify-between {
+/* 主轴内容分配方式 */
+justify-content: space-between;
+}
+.wt-space--justify-around {
+/* 主轴内容分配方式 */
+justify-content: space-around;
+}
+.wt-space--justify-evenly {
+/* 主轴内容分配方式 */
+justify-content: space-evenly;
+}
 </style>

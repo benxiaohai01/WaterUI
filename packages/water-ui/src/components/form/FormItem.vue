@@ -10,8 +10,10 @@ export interface FormItemProps {
   rules?: FormRule | FormRule[]
 }
 
+/* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtFormItem' })
 
+/* 声明组件入参与默认值 */
 const props = withDefaults(defineProps<FormItemProps>(), {
   label: '',
   prop: '',
@@ -31,6 +33,7 @@ const form = inject<{
   unregisterField: (field: { prop?: string; validate: () => boolean; clear: () => void }) => void
 }>('wtForm')
 
+/* 响应式状态 */
 const errorMessage = ref('')
 
 const currentRules = computed<FormRule[]>(() => {
@@ -39,6 +42,7 @@ const currentRules = computed<FormRule[]>(() => {
   return Array.isArray(source) ? source : [source]
 })
 
+/* 交互处理逻辑 */
 const validate = () => {
   const value = props.prop ? form?.model[props.prop] : undefined
   const ruleList = currentRules.value
@@ -84,6 +88,7 @@ const validate = () => {
   return true
 }
 
+/* 交互处理逻辑 */
 const clear = () => {
   errorMessage.value = ''
 }
@@ -95,6 +100,7 @@ onBeforeUnmount(() => {
   form?.unregisterField(field)
 })
 
+/* 派生状态（计算属性） */
 const classes = computed(() => [
   'wt-form-item',
   `wt-form-item--${form?.labelPosition || 'left'}`,
@@ -104,6 +110,7 @@ const classes = computed(() => [
   }
 ])
 
+/* 派生状态（计算属性） */
 const labelStyle = computed(() => ({
   width: form?.labelPosition === 'left' ? form.labelWidth : undefined
 }))
@@ -122,49 +129,71 @@ const labelStyle = computed(() => ({
     </div>
   </div>
 </template>
-
 <style scoped lang="scss">
 .wt-form-item {
+  /* 盒模型显示方式 */
   display: flex;
+  /* 交叉轴对齐方式 */
   align-items: flex-start;
+  /* 元素间距 */
   gap: 12px;
+  /* 最小宽度 */
   min-width: 0;
 }
 
 .wt-form-item--top {
+  /* 弹性布局主轴方向 */
   flex-direction: column;
+  /* 元素间距 */
   gap: 8px;
 }
 
 .wt-form-item__label {
+  /* 弹性布局中的伸缩比例 */
   flex: 0 0 auto;
+  /* 最小高度 */
   min-height: 40px;
+  /* 盒模型显示方式 */
   display: inline-flex;
+  /* 交叉轴对齐方式 */
   align-items: center;
+  /* 文本颜色 */
   color: var(--wt-text-secondary);
+  /* 字号 */
   font-size: 14px;
+  /* 行高 */
   line-height: 1.4;
 }
 
 .wt-form-item--top .wt-form-item__label {
+  /* 最小高度 */
   min-height: auto;
 }
 
 .wt-form-item.is-required .wt-form-item__label::before {
+  /* 伪元素内容 */
   content: '*';
+  /* 右侧外边距 */
   margin-right: 4px;
+  /* 文本颜色 */
   color: var(--wt-danger);
 }
 
 .wt-form-item__content {
+  /* 弹性布局中的伸缩比例 */
   flex: 1;
+  /* 最小宽度 */
   min-width: 0;
 }
 
 .wt-form-item__error {
+  /* 外边距 */
   margin: 6px 0 0;
+  /* 文本颜色 */
   color: var(--wt-danger);
+  /* 字号 */
   font-size: 12px;
+  /* 行高 */
   line-height: 1.4;
 }
 </style>

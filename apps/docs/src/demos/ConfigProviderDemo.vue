@@ -16,26 +16,35 @@ const demoSwitch = ref(true)
       </div>
 
       <div class="global-config-demo__grid">
-        <label class="global-config-demo__control">
+        <div class="global-config-demo__control">
           <span>高光尺寸</span>
-          <wt-slider v-model="theme.highlightSize" :min="5" :max="20" :step="1" show-value />
-        </label>
+          <wt-slider v-model="theme.highlightSize" :min="5" :max="14" :step="1" show-value />
+        </div>
 
-        <label class="global-config-demo__control">
+        <div class="global-config-demo__control">
+          <span>高光亮度</span>
+          <wt-slider v-model="theme.highlightOpacity" :min="0.3" :max="1" :step="0.05" show-value />
+        </div>
+
+        <div class="global-config-demo__control">
+          <span>高光偏移</span>
+          <wt-slider v-model="theme.highlightOffset" :min="0" :max="12" :step="1" show-value />
+        </div>
+        <div class="global-config-demo__control">
           <span>动画速度</span>
           <wt-slider v-model="theme.motion" :min="2" :max="7" :step="0.1" show-value />
-        </label>
+        </div>
 
-        <label class="global-config-demo__control">
+        <div class="global-config-demo__control">
           <span>阴影深度</span>
           <wt-slider v-model="theme.shadowAlpha" :min="0.01" :max="0.12" :step="0.005" show-value />
-        </label>
+        </div>
 
-        <label class="global-config-demo__control global-config-demo__control--color">
+        <div class="global-config-demo__control global-config-demo__control--color">
           <span>主色</span>
           <wt-input v-model="theme.primaryColor" type="color" class="global-config-demo__color" />
           <em>{{ theme.primaryColor }}</em>
-        </label>
+        </div>
       </div>
     </div>
 

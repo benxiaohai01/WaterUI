@@ -1,0 +1,7 @@
+interface:
+  display_name: "Water UI Component Design"
+  short_description: "Design Water UI Vue 3 components and theme tokens"
+  default_prompt: "Use $water-ui-component-design to create, modify, or review a Water UI component while following the shared water-drop visual and API contract."
+
+policy:
+  allow_implicit_invocation: true

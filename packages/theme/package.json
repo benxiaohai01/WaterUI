@@ -13,7 +13,7 @@
     "./dist/dark.css": "./dist/dark.css"
   },
   "scripts": {
-    "build": "node scripts/copy.mjs",
+    "build": "node scripts/build.mjs",
     "typecheck": "echo 'no typecheck for theme'",
     "lint": "echo 'no lint for theme'",
     "test": "echo 'no test for theme'"

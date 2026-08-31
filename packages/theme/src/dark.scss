@@ -1,0 +1,47 @@
+:root[data-theme='dark'],
+[data-wt-theme='dark'] {
+  /* 颜色方案（跟随明暗主题） */
+  color-scheme: dark;
+
+  /* 页面背景令牌 */
+  --wt-bg: #111821;
+  /* 表面颜色令牌 */
+  --wt-surface: #18222f;
+  /* 表面颜色令牌 */
+  --wt-surface-strong: #1f2c3b;
+
+  /* 文本颜色令牌 */
+  --wt-text: #eaf2f8;
+  /* 文本颜色令牌 */
+  --wt-text-secondary: #a9b7c6;
+  /* 文本颜色令牌 */
+  --wt-text-placeholder: #718093;
+
+  /* 主色令牌 */
+  --wt-primary: #6b9fff;
+  /* 主色令牌 */
+  --wt-primary-soft: rgba(107, 159, 255, 0.18);
+  /* 成功语义色令牌 */
+  --wt-success: #72c98a;
+  /* 警告语义色令牌 */
+  --wt-warning: #e5ae5a;
+  /* 危险语义色令牌 */
+  --wt-danger: #ef7a7a;
+  /* 信息语义色令牌 */
+  --wt-info: #9da8e8;
+
+  /* 水滴高光令牌 */
+  --wt-highlight: rgba(255, 255, 255, 0.32);
+  /* 水滴高光令牌 */
+  --wt-highlight-small: rgba(255, 255, 255, 0.2);
+  /* 阴影令牌 */
+  --wt-shadow-dark: rgba(0, 0, 0, 0.46);
+  /* 阴影令牌 */
+  --wt-shadow-deeper: rgba(0, 0, 0, 0.62);
+  /* 阴影令牌 */
+  --wt-shadow-light: rgba(255, 255, 255, 0.08);
+  /* 文本颜色令牌 */
+  --wt-text-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+  /* 涟漪颜色 */
+  --wt-ripple-color: rgba(255, 255, 255, 0.24);
+}

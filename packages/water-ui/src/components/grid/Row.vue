@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
+/* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtRow' })
 
+/* 声明组件入参与默认值 */
 const props = withDefaults(
   defineProps<{
     gutter?: number | [number, number]
@@ -20,6 +22,7 @@ const props = withDefaults(
   }
 )
 
+/* 派生状态（计算属性） */
 const style = computed(() => {
   const horizontal = Array.isArray(props.gutter) ? props.gutter[0] : props.gutter
   const vertical = Array.isArray(props.gutter) ? props.gutter[1] : props.gutter
@@ -40,22 +43,54 @@ const style = computed(() => {
     <slot />
   </div>
 </template>
-
 <style scoped lang="scss">
 .wt-row {
+  /* 盒模型显示方式 */
   display: flex;
+  /* 弹性项是否换行 */
   flex-wrap: wrap;
+  /* 最小宽度 */
   min-width: 0;
 }
 
-.wt-row--start { justify-content: flex-start; }
-.wt-row--center { justify-content: center; }
-.wt-row--end { justify-content: flex-end; }
-.wt-row--between { justify-content: space-between; }
-.wt-row--around { justify-content: space-around; }
-.wt-row--evenly { justify-content: space-evenly; }
-.wt-row--align-start { align-items: flex-start; }
-.wt-row--align-center { align-items: center; }
-.wt-row--align-end { align-items: flex-end; }
-.wt-row--align-stretch { align-items: stretch; }
+.wt-row--start {
+/* 主轴内容分配方式 */
+justify-content: flex-start;
+}
+.wt-row--center {
+/* 主轴内容分配方式 */
+justify-content: center;
+}
+.wt-row--end {
+/* 主轴内容分配方式 */
+justify-content: flex-end;
+}
+.wt-row--between {
+/* 主轴内容分配方式 */
+justify-content: space-between;
+}
+.wt-row--around {
+/* 主轴内容分配方式 */
+justify-content: space-around;
+}
+.wt-row--evenly {
+/* 主轴内容分配方式 */
+justify-content: space-evenly;
+}
+.wt-row--align-start {
+/* 交叉轴对齐方式 */
+align-items: flex-start;
+}
+.wt-row--align-center {
+/* 交叉轴对齐方式 */
+align-items: center;
+}
+.wt-row--align-end {
+/* 交叉轴对齐方式 */
+align-items: flex-end;
+}
+.wt-row--align-stretch {
+/* 交叉轴对齐方式 */
+align-items: stretch;
+}
 </style>
