@@ -127,7 +127,7 @@ app.use(WaterUI)`
   margin: auto;
   border-radius: 41% 59% 70% 30% / 39% 49% 51% 61%;
   background: transparent;
-  border: 1px solid color-mix(in srgb, var(--wt-primary) 26%, transparent);
+  border: 1px solid color-mix(in srgb, var(--wt-shadow-dark) 26%, transparent);
   box-shadow:
     inset 14px 24px 40px rgba(0, 0, 0, 0.18),
     inset -12px -14px 30px rgba(255, 255, 255, 0.5),
@@ -139,10 +139,10 @@ app.use(WaterUI)`
   position: absolute;
   top: 26%;
   left: 28%;
-  width: 38px;
-  height: 38px;
-  border-radius: 48% 52% 79% 21% / 46% 25% 75% 54%;
-  background: rgba(255, 255, 255, 0.86);
+  width: 35px;
+  height: 35px;
+  border-radius: 48% 52% 59% 21% / 46% 25% 55% 54%;
+  background: rgb(255, 255, 255);
   animation: home-highlight-wobble 4.6s ease-in-out infinite;
   will-change: transform;
 }
@@ -152,7 +152,7 @@ app.use(WaterUI)`
   left: 37%;
   width: 15px;
   height: 15px;
-  background: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 1);
   animation-duration: 3.6s;
   animation-delay: 0.8s;
 }
