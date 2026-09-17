@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { RadioProps } from './props'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtRadio' })
@@ -17,6 +18,9 @@ const emit = defineEmits<{
   'update:modelValue': [value: string | number | boolean]
   change: [value: string | number | boolean]
 }>()
+
+/* 组件级高光参数（优先级高于全局配置） */
+const highlightStyle = useHighlightStyle(props)
 
 /* 派生状态（计算属性） */
 const classes = computed(() => [
@@ -37,7 +41,7 @@ const handleChange = () => {
 </script>
 
 <template>
-  <label :class="classes">
+  <label :class="classes" :style="highlightStyle">
     <input
       class="wt-radio__input"
       type="radio"
@@ -51,7 +55,15 @@ const handleChange = () => {
   </label>
 </template>
 <style scoped lang="scss">
+@use '@water-ui/theme/src/mixins/index.scss' as wt;
+
 .wt-radio {
+  /* 次高光尺寸（随全局基准等比缩放，5px / 12px）：声明在根元素，便于组件 props 覆盖 */
+  --wt-highlight-small-size: calc(var(--wt-highlight-size-base) * 0.4167);
+  /* 次高光顶部定位（随全局偏移等比缩放，3px / 8px） */
+  --wt-highlight-small-top: calc(var(--wt-highlight-offset) * 0.375);
+  /* 次高光右侧定位（随全局偏移等比缩放，3px / 8px） */
+  --wt-highlight-small-right: calc(var(--wt-highlight-offset) * 0.375);
   /* 盒模型显示方式 */
   display: inline-flex;
   /* 交叉轴对齐方式 */
@@ -82,12 +94,6 @@ const handleChange = () => {
   position: relative;
   /* 创建独立层叠上下文，隔离内部元素 */
   isolation: isolate;
-  /* 次高光尺寸 */
-  --wt-highlight-small-size: 5px;
-  /* 次高光顶部定位 */
-  --wt-highlight-small-top: min(var(--wt-highlight-offset), 3px);
-  /* 次高光右侧定位 */
-  --wt-highlight-small-right: min(var(--wt-highlight-offset), 3px);
   /* 宽度 */
   width: 20px;
   /* 高度 */
@@ -105,10 +111,8 @@ const handleChange = () => {
     inset 2px 3px 6px rgba(0, 0, 0, 0.14),
     inset -1px -1px 3px var(--wt-shadow-light),
     2px 2px 7px rgba(0, 0, 0, 0.07);
-  /* 动画 */
-  animation: wt-liquid-flow var(--wt-motion-normal) ease-in-out infinite;
-  /* 动画性能提示 */
-  will-change: border-radius;
+  /* 液体形变动画（含 will-change: border-radius） */
+  @include wt.wt-liquid-animation(wt-liquid-flow, var(--wt-motion-normal), border-radius);
 }
 
 .wt-radio__dot::before {
@@ -121,9 +125,9 @@ const handleChange = () => {
   /* 高度 */
   height: var(--wt-highlight-small-size);
   /* 顶部偏移 */
-  top: var(--wt-highlight-small-top);
+  top: min(calc(var(--wt-highlight-inset) + var(--wt-highlight-size) + var(--wt-highlight-group-gap)), calc(100% - var(--wt-highlight-small-size) - 4px));
   /* 右侧偏移 */
-  right: var(--wt-highlight-small-right);
+  right: min(calc(var(--wt-highlight-inset) + var(--wt-highlight-size) + var(--wt-highlight-group-gap)), calc(100% - var(--wt-highlight-small-size) - 4px));
   /* 背景 */
   background: var(--wt-highlight);
   /* 圆角，塑造水滴/液体轮廓 */
@@ -148,7 +152,7 @@ const handleChange = () => {
   /* 形变 */
   transform: scale(0);
   /* 过渡动画 */
-  transition: transform 0.18s ease;
+  transition: transform var(--wt-motion-fast) ease;
 }
 
 .wt-radio.is-checked .wt-radio__dot::after {
@@ -163,7 +167,7 @@ const handleChange = () => {
   opacity: 0.55;
 }
 
-.wt-radio:focus-visible .wt-radio__dot {
+.wt-radio__input:focus-visible + .wt-radio__dot {
   /* 焦点轮廓 */
   outline: 2px solid var(--wt-primary);
   /* 焦点轮廓偏移 */

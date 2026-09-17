@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import type { ColorPickerProps } from './props'
 import { resolveSize } from '../config-provider/context'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtColorPicker' })
@@ -22,6 +23,9 @@ const emit = defineEmits<{
 /* 解析组件尺寸配置 */
 const size = resolveSize(() => props.size)
 
+/* 组件级高光参数（优先级高于全局配置） */
+const highlightStyle = useHighlightStyle(props)
+
 /* 派生状态（计算属性） */
 const classes = computed(() => [
   'wt-color-picker',
@@ -33,26 +37,40 @@ const classes = computed(() => [
 /* 派生状态（计算属性） */
 const color = computed(() => props.modelValue || '#3d7eff')
 
+/* 交互处理逻辑：校验并归一化十六进制颜色（补 #、转小写），非法值返回空串 */
+const normalizeColor = (value: string) => {
+  const matched = /^#?([0-9a-f]{6})$/i.exec(value.trim())
+  return matched ? `#${matched[1].toLowerCase()}` : ''
+}
+
 /* 交互处理逻辑 */
 const handleInput = (event: Event) => {
   const next = (event.target as HTMLInputElement).value
   emit('update:modelValue', next)
 }
 
-/* 交互处理逻辑 */
+/* 交互处理逻辑：仅合法颜色写回受控值，避免色板与文本不一致 */
 const handleTextInput = (event: Event) => {
-  const next = (event.target as HTMLInputElement).value
-  emit('update:modelValue', next)
+  const next = normalizeColor((event.target as HTMLInputElement).value)
+  if (next) emit('update:modelValue', next)
 }
 
-/* 交互处理逻辑 */
-const handleTextChange = () => {
-  emit('change', props.modelValue)
+/* 交互处理逻辑：以事件目标值为准归一化，非法输入回退到当前颜色 */
+const handleTextChange = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const next = normalizeColor(input.value)
+  if (!next) {
+    input.value = color.value
+    return
+  }
+  input.value = next
+  emit('update:modelValue', next)
+  emit('change', next)
 }
 </script>
 
 <template>
-  <div :class="classes">
+  <div :class="classes" :style="highlightStyle">
     <span class="wt-color-picker__swatch" :style="{ backgroundColor: color }">
       <input
         class="wt-color-picker__native"
@@ -76,12 +94,12 @@ const handleTextChange = () => {
 </template>
 <style scoped lang="scss">
 .wt-color-picker {
-  /* 高光尺寸 */
-  --wt-highlight-size: min(var(--wt-highlight-size-base), 11px);
-  /* 次高光尺寸 */
-  --wt-highlight-small-size: min(calc(var(--wt-highlight-size-base) * 0.5), 6px);
-  /* 高光内边距 */
-  --wt-highlight-inset: min(var(--wt-highlight-offset), 6px);
+  /* 高光尺寸（随全局基准等比缩放） */
+  --wt-highlight-size: calc(var(--wt-highlight-size-base) * 0.9167);
+  /* 次高光尺寸（随全局基准等比缩放） */
+  --wt-highlight-small-size: calc(var(--wt-highlight-size-base) * 0.5);
+  /* 高光内边距（随全局偏移等比缩放） */
+  --wt-highlight-inset: calc(var(--wt-highlight-offset) * 0.75);
   /* 定位方式 */
   position: relative;
   /* 创建独立层叠上下文，隔离内部元素 */
@@ -126,9 +144,9 @@ const handleTextChange = () => {
   /* 高度 */
   height: var(--wt-highlight-size);
   /* 顶部偏移 */
-  top: var(--wt-highlight-top);
+  top: min(var(--wt-highlight-inset), calc(100% - var(--wt-highlight-size) - 4px));
   /* 右侧偏移 */
-  right: var(--wt-highlight-right);
+  right: min(var(--wt-highlight-inset), calc(100% - var(--wt-highlight-size) - 4px));
   /* 背景 */
   background: var(--wt-highlight);
   /* 圆角，塑造水滴/液体轮廓 */
@@ -151,9 +169,9 @@ const handleTextChange = () => {
   /* 高度 */
   height: var(--wt-highlight-small-size);
   /* 顶部偏移 */
-  top: var(--wt-highlight-small-top);
+  top: min(calc(var(--wt-highlight-inset) + var(--wt-highlight-size) + var(--wt-highlight-group-gap)), calc(100% - var(--wt-highlight-small-size) - 4px));
   /* 右侧偏移 */
-  right: var(--wt-highlight-small-right);
+  right: min(calc(var(--wt-highlight-inset) + var(--wt-highlight-size) + var(--wt-highlight-group-gap)), calc(100% - var(--wt-highlight-small-size) - 4px));
   /* 背景 */
   background: var(--wt-highlight-small);
   /* 圆角，塑造水滴/液体轮廓 */

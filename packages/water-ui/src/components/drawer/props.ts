@@ -1,6 +1,8 @@
+import type { HighlightProps } from '../../utils/highlight'
+
 export type DrawerPlacement = 'left' | 'right' | 'top' | 'bottom'
 
-export interface DrawerProps {
+export interface DrawerProps extends HighlightProps {
   modelValue?: boolean
   title?: string
   placement?: DrawerPlacement

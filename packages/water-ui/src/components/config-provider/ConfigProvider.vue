@@ -9,19 +9,16 @@ const props = withDefaults(
   defineProps<{
     theme?: 'light' | 'dark' | 'system'
     size?: 'small' | 'medium' | 'large'
-    prefix?: string
   }>(),
   {
     theme: 'system',
-    size: 'medium',
-    prefix: 'wt'
+    size: 'medium'
   }
 )
 
 provideConfig(() => ({
   theme: props.theme,
-  size: props.size,
-  prefix: props.prefix
+  size: props.size
 }))
 </script>
 
@@ -29,7 +26,6 @@ provideConfig(() => ({
   <div
     class="wt-config-provider"
     :data-wt-size="size"
-    :data-wt-prefix="prefix"
     :data-wt-theme="theme === 'system' ? undefined : theme"
   >
     <slot />

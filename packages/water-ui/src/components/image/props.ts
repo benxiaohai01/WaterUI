@@ -1,4 +1,6 @@
-export interface ImageProps {
+import type { HighlightProps } from '../../utils/highlight'
+
+export interface ImageProps extends HighlightProps {
   /** 图片地址 */
   src: string
   /** 替代文本 */

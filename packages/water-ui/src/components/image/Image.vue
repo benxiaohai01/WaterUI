@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import type { ImageProps } from './props'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtImage' })
@@ -15,6 +16,9 @@ const props = withDefaults(defineProps<ImageProps>(), {
   preview: false,
   customClass: ''
 })
+
+/* 组件级高光参数（优先级高于全局配置） */
+const highlightStyle = useHighlightStyle(props)
 
 /* 响应式状态：加载状态 */
 const loaded = ref(false)
@@ -47,21 +51,37 @@ const handleKeydown = (event: KeyboardEvent) => {
   if (event.key === 'Escape') previewVisible.value = false
 }
 
-onMounted(() => document.addEventListener('keydown', handleKeydown))
+/* 交互处理逻辑：图片地址变化时重置加载与错误状态 */
+watch(
+  () => props.src,
+  () => {
+    loaded.value = false
+    error.value = false
+  }
+)
+
+/* 交互处理逻辑：仅在预览打开期间注册全局键盘监听，避免多实例互相干扰 */
+watch(previewVisible, (visible) => {
+  if (visible) document.addEventListener('keydown', handleKeydown)
+  else document.removeEventListener('keydown', handleKeydown)
+})
+
 onBeforeUnmount(() => document.removeEventListener('keydown', handleKeydown))
 </script>
 
 <template>
-  <div class="wt-image" :class="[props.customClass, { 'is-round': radius === 'round' }]" :style="containerStyle">
+  <div class="wt-image" :class="[props.customClass, { 'is-round': radius === 'round' }]" :style="[highlightStyle, containerStyle]">
     <img
       v-if="!error"
       :src="src"
       :alt="alt"
       :style="imageStyle"
       class="wt-image__inner"
+      :tabindex="preview ? 0 : undefined"
       @load="loaded = true"
       @error="error = true"
       @click="preview && (previewVisible = true)"
+      @keydown.enter="preview && (previewVisible = true)"
     />
     <div v-else class="wt-image__error">
       <span>图片加载失败</span>
@@ -69,7 +89,14 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleKeydown))
 
     <Teleport to="body">
       <Transition name="wt-image-fade">
-        <div v-if="previewVisible" class="wt-image__preview" @click="previewVisible = false">
+        <div
+          v-if="previewVisible"
+          class="wt-image__preview"
+          role="dialog"
+          aria-modal="true"
+          aria-label="图片预览"
+          @click="previewVisible = false"
+        >
           <img :src="src" :alt="alt" class="wt-image__preview-img" />
         </div>
       </Transition>
@@ -106,7 +133,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleKeydown))
   /* 鼠标指针样式 */
   cursor: default;
   /* 过渡 */
-  transition: transform 0.3s ease;
+  transition: transform var(--wt-motion-base) ease;
 }
 
 .wt-image:not(.is-round) .wt-image__inner {
@@ -180,7 +207,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleKeydown))
 .wt-image-fade-enter-active,
 .wt-image-fade-leave-active {
   /* 过渡 */
-  transition: opacity 0.25s ease;
+  transition: opacity var(--wt-motion-fast) ease;
 }
 
 .wt-image-fade-enter-from,

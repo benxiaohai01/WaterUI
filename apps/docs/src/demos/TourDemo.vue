@@ -12,7 +12,7 @@ const steps = [
   {
     title: '主题切换',
     description: '点击右上角按钮可在明暗主题间切换。',
-    target: '.docs-nav__theme',
+    target: '.docs-theme-toggle',
     placement: 'bottom'
   },
   {

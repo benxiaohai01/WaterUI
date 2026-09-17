@@ -12,6 +12,7 @@ const props = withDefaults(defineProps<AnchorProps>(), {
   defaultActive: undefined,
   container: undefined,
   offset: 0,
+  targetOffset: 0,
   clickActive: true,
   customClass: ''
 })
@@ -32,6 +33,9 @@ const activeHref = ref<string>('')
 /* 响应式状态：滚动容器 */
 const scrollContainer = ref<HTMLElement | Window | null>(null)
 
+/* 响应式状态：最近一次点击定位的锚点（目标仍在视口内时保持高亮，避免与地址栏 hash 不一致） */
+const clickedHref = ref('')
+
 /* 提供上下文 */
 provideAnchor({
   get activeHref() {
@@ -39,7 +43,9 @@ provideAnchor({
   },
   onClick: (href) => {
     emit('click', href)
+    clickedHref.value = href
     if (props.clickActive) setActive(href)
+    syncHash(href)
     scrollToHref(href)
   },
   register: (href) => {
@@ -54,12 +60,31 @@ provideAnchor({
 /* 派生状态：容器类名 */
 const classes = computed(() => ['wt-anchor', props.customClass])
 
+/* 规范化锚点 href（去掉前缀 #） */
+const normalizeHref = (href: string) => href.replace(/^#/, '')
+
+/* 解析锚点对应的目标元素 */
+const resolveTarget = (href: string): HTMLElement | null => {
+  const id = normalizeHref(href)
+  return id ? document.getElementById(id) : null
+}
+
+/* 目标定位偏移：滚动偏移量 + 目标额外偏移（可预留固定头部高度） */
+const targetOffset = computed(() => props.offset + props.targetOffset)
+
 /* 设置激活项 */
 const setActive = (href: string) => {
   if (activeHref.value === href) return
   activeHref.value = href
   emit('update:modelValue', href)
   emit('change', href)
+}
+
+/* 同步地址栏 hash（replaceState 不新增历史记录，保证 hash 与高亮一致） */
+const syncHash = (href: string) => {
+  const hash = `#${normalizeHref(href)}`
+  if (window.location.hash === hash) return
+  history.replaceState(null, '', hash)
 }
 
 /* 解析滚动容器 */
@@ -72,19 +97,36 @@ const resolveContainer = (): HTMLElement | Window | null => {
   return props.container ?? window
 }
 
+/* 判断滚动容器是否为窗口 */
+const isWindowContainer = (container: HTMLElement | Window): container is Window => container === window
+
+/* 获取容器滚动位置 */
+const getScrollTop = (container: HTMLElement | Window) =>
+  isWindowContainer(container) ? window.scrollY || document.documentElement.scrollTop : container.scrollTop
+
+/* 获取容器可视高度 */
+const getViewportHeight = (container: HTMLElement | Window) =>
+  isWindowContainer(container) ? window.innerHeight : container.clientHeight
+
+/* 计算目标元素相对滚动内容区顶部的位置（基于 getBoundingClientRect，兼容滚动容器与固定头部） */
+const getTargetTop = (target: HTMLElement, container: HTMLElement | Window, scrollTop: number) => {
+  const rect = target.getBoundingClientRect()
+  if (isWindowContainer(container)) return rect.top + scrollTop
+  const containerRect = container.getBoundingClientRect()
+  /* 扣除容器上边框，保证目标位置与 scrollTop 处于同一参考系 */
+  return rect.top - containerRect.top - container.clientTop + scrollTop
+}
+
 /* 平滑滚动到目标 */
 const scrollToHref = (href: string) => {
-  const id = href.replace(/^#/, '')
-  const target = document.getElementById(id)
+  const target = resolveTarget(href)
   if (!target) return
   const container = scrollContainer.value ?? window
-  if (container === window) {
-    const top = target.getBoundingClientRect().top + window.scrollY - props.offset
+  const top = getTargetTop(target, container, getScrollTop(container)) - targetOffset.value
+  if (isWindowContainer(container)) {
     window.scrollTo({ top, behavior: 'smooth' })
   } else {
-    const el = container as HTMLElement
-    const top = target.getBoundingClientRect().top - el.getBoundingClientRect().top + el.scrollTop - props.offset
-    el.scrollTo({ top, behavior: 'smooth' })
+    container.scrollTo({ top, behavior: 'smooth' })
   }
 }
 
@@ -92,22 +134,40 @@ const scrollToHref = (href: string) => {
 const handleScroll = () => {
   const container = scrollContainer.value
   if (!container) return
-  const scrollTop = container === window ? window.scrollY : (container as HTMLElement).scrollTop
-  const viewportHeight = container === window ? window.innerHeight : (container as HTMLElement).clientHeight
+  const scrollTop = getScrollTop(container)
+  const viewportHeight = getViewportHeight(container)
+  /* 判定线：容器可视区顶部 30% 处 */
+  const activation = scrollTop + viewportHeight * 0.3
 
   let current = ''
   for (const href of links.value) {
-    const id = href.replace(/^#/, '')
-    const el = document.getElementById(id)
+    const el = resolveTarget(href)
     if (!el) continue
-    const rect = el.getBoundingClientRect()
-    const containerRect = container === window ? { top: 0 } : (container as HTMLElement).getBoundingClientRect()
-    const top = rect.top - containerRect.top + scrollTop - props.offset
-    if (top <= scrollTop + viewportHeight * 0.3) {
-      current = href
+    if (getTargetTop(el, container, scrollTop) - props.offset <= activation) current = href
+  }
+
+  /* 点击定位后目标仍在视口内时保持点击项高亮（滚动被夹取时不会跳回上一项），离开视口后恢复常规侦测 */
+  const pendingTarget = clickedHref.value ? resolveTarget(clickedHref.value) : null
+  if (clickedHref.value && pendingTarget) {
+    const rect = pendingTarget.getBoundingClientRect()
+    const containerTop = isWindowContainer(container) ? 0 : container.getBoundingClientRect().top
+    const containerBottom = isWindowContainer(container)
+      ? window.innerHeight
+      : container.getBoundingClientRect().bottom
+    const inView = rect.bottom > containerTop + props.offset && rect.top < containerBottom
+    if (!inView) {
+      clickedHref.value = ''
+    } else if (links.value.indexOf(current) < links.value.indexOf(clickedHref.value)) {
+      current = clickedHref.value
     }
   }
-  if (current && current !== activeHref.value) setActive(current)
+
+  if (!current) return
+  if (current !== activeHref.value) {
+    setActive(current)
+    /* 滚动触发的激活项变化同样写回地址栏，保证两者一致 */
+    syncHash(current)
+  }
 }
 
 const bindScroll = () => {
@@ -123,7 +183,15 @@ const unbindScroll = () => {
   scrollContainer.value = null
 }
 
-onMounted(bindScroll)
+onMounted(() => {
+  bindScroll()
+  /* 初始 hash 同步：地址栏已带锚点时滚动到对应位置并高亮该链接 */
+  const initial = normalizeHref(window.location.hash)
+  if (!initial || !links.value.includes(initial)) return
+  clickedHref.value = initial
+  setActive(initial)
+  scrollToHref(initial)
+})
 onBeforeUnmount(unbindScroll)
 
 /* 监听容器变化（函数形式容器可能切换） */
@@ -132,15 +200,24 @@ watch(() => props.container, () => {
   bindScroll()
 })
 
-/* 初始化激活值 */
+/* 初始化激活值：外部 modelValue 优先（初值与后续外部修改均以外部为准） */
 watch(
-  links,
+  () => props.modelValue,
+  (value) => {
+    if (value) activeHref.value = value
+  },
+  { immediate: true }
+)
+
+/* 初始化激活值：锚点注册完成后回落到 defaultActive */
+watch(
+  () => links.value.slice(),
   () => {
     if (!activeHref.value && links.value.length > 0 && props.defaultActive) {
       setActive(props.defaultActive)
     }
   },
-  { immediate: true }
+  { immediate: true, flush: 'post' }
 )
 </script>
 

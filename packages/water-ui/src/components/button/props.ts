@@ -1,8 +1,10 @@
+import type { HighlightProps } from '../../utils/highlight'
+
 export type ButtonType = 'default' | 'primary' | 'success' | 'warning' | 'danger' | 'info'
 export type ButtonSize = 'small' | 'medium' | 'large'
 export type NativeButtonType = 'button' | 'submit' | 'reset'
 
-export interface ButtonProps {
+export interface ButtonProps extends HighlightProps {
   type?: ButtonType
   size?: ButtonSize
   disabled?: boolean

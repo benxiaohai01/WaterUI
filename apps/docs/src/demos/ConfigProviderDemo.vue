@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useGlobalTheme } from '@/composables/useGlobalTheme'
+import { resetGlobalTheme, useGlobalTheme } from '@/composables/useGlobalTheme'
 
 const theme = useGlobalTheme()
 const demoText = ref('')
@@ -11,8 +11,11 @@ const demoSwitch = ref(true)
   <div class="global-config-demo">
     <div class="global-config-demo__controls">
       <div class="global-config-demo__heading">
-        <wt-text strong>全局水滴配置</wt-text>
-        <wt-text type="secondary">通过 CSS 变量作用于全部组件。</wt-text>
+        <div>
+          <wt-text strong>全局水滴配置</wt-text>
+          <wt-text type="secondary">通过 CSS 变量作用于全部组件，并保存在本地，切换页面与刷新后依然生效。</wt-text>
+        </div>
+        <wt-button size="small" @click="resetGlobalTheme()">恢复默认</wt-button>
       </div>
 
       <div class="global-config-demo__grid">
@@ -38,12 +41,6 @@ const demoSwitch = ref(true)
         <div class="global-config-demo__control">
           <span>阴影深度</span>
           <wt-slider v-model="theme.shadowAlpha" :min="0.01" :max="0.12" :step="0.005" show-value />
-        </div>
-
-        <div class="global-config-demo__control global-config-demo__control--color">
-          <span>主色</span>
-          <wt-input v-model="theme.primaryColor" type="color" class="global-config-demo__color" />
-          <em>{{ theme.primaryColor }}</em>
         </div>
       </div>
     </div>
@@ -105,24 +102,6 @@ const demoSwitch = ref(true)
 
 .global-config-demo__control .wt-slider {
   grid-column: 1 / -1;
-}
-
-.global-config-demo__control em {
-  color: var(--wt-text);
-  font-style: normal;
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.global-config-demo__color {
-  grid-column: 1 / -1;
-  max-width: 96px;
-}
-
-.global-config-demo__color :deep(.wt-input__native) {
-  height: 28px;
-  padding: 2px 4px;
-  cursor: pointer;
 }
 
 .global-config-demo__preview {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, inject, onBeforeUnmount, ref } from 'vue'
+import { computed, inject, onBeforeUnmount, ref, watch } from 'vue'
 import type { FormRule } from './props'
+import { useUid } from '../../utils/uid'
 
 export interface FormItemProps {
   label?: string
@@ -36,15 +37,43 @@ const form = inject<{
 /* 响应式状态 */
 const errorMessage = ref('')
 
-const currentRules = computed<FormRule[]>(() => {
-  const source = props.prop ? form?.rules[props.prop] : props.rules
+/* 交互处理逻辑：归一化单条或数组形式的规则 */
+const normalizeRules = (source?: FormRule | FormRule[]): FormRule[] => {
   if (!source) return []
   return Array.isArray(source) ? source : [source]
+}
+
+/* 合并父级表单规则与自身规则，required 自动合成一条必填规则 */
+const currentRules = computed<FormRule[]>(() => {
+  const formRules = props.prop ? form?.rules?.[props.prop] : undefined
+  const list = [...normalizeRules(formRules), ...normalizeRules(props.rules)]
+  if (props.required && !list.some((rule) => rule.required)) {
+    list.unshift({ required: true, message: `${props.label || props.prop}不能为空` })
+  }
+  return list
+})
+
+/* 派生状态（计算属性）：是否需要展示必填标记 */
+const hasRequired = computed(
+  () => props.required || currentRules.value.some((rule) => rule.required)
+)
+
+/* 派生状态（计算属性）：当前字段值 */
+const fieldValue = computed(() => (props.prop ? form?.model?.[props.prop] : undefined))
+
+/* 校验变化后清除错误提示 */
+watch(fieldValue, () => {
+  if (errorMessage.value) errorMessage.value = ''
 })
 
 /* 交互处理逻辑 */
 const validate = () => {
-  const value = props.prop ? form?.model[props.prop] : undefined
+  if (!props.prop && !props.rules && !props.required) {
+    errorMessage.value = ''
+    return true
+  }
+
+  const value = fieldValue.value
   const ruleList = currentRules.value
 
   for (const rule of ruleList) {
@@ -65,9 +94,14 @@ const validate = () => {
         return false
       }
 
-      if (rule.pattern && !rule.pattern.test(String(value))) {
-        errorMessage.value = rule.message || '格式不正确'
-        return false
+      if (rule.pattern) {
+        const pattern = rule.pattern.global || rule.pattern.sticky
+          ? new RegExp(rule.pattern.source, rule.pattern.flags)
+          : rule.pattern
+        if (!pattern.test(String(value))) {
+          errorMessage.value = rule.message || '格式不正确'
+          return false
+        }
       }
 
       if (rule.validator) {
@@ -79,6 +113,11 @@ const validate = () => {
         if (typeof result === 'string') {
           errorMessage.value = result
           return false
+        }
+        if (typeof (result as unknown as { then?: unknown }).then === 'function') {
+          if (import.meta.env.DEV) {
+            console.warn('[WtFormItem] validator 返回 Promise 时不会被同步校验等待，请使用同步校验器')
+          }
         }
       }
     }
@@ -105,7 +144,7 @@ const classes = computed(() => [
   'wt-form-item',
   `wt-form-item--${form?.labelPosition || 'left'}`,
   {
-    'is-required': props.required,
+    'is-required': hasRequired.value,
     'is-error': Boolean(props.error || errorMessage.value)
   }
 ])
@@ -114,16 +153,25 @@ const classes = computed(() => [
 const labelStyle = computed(() => ({
   width: form?.labelPosition === 'left' ? form.labelWidth : undefined
 }))
+
+/* 控件与错误提示的关联 id（通过插槽作用域下发给消费方） */
+const fieldId = useUid('wt-form-item')
+const errorId = computed(() => `${fieldId}-error`)
 </script>
 
 <template>
   <div :class="classes">
-    <label v-if="label" class="wt-form-item__label" :style="labelStyle">
+    <label v-if="label" class="wt-form-item__label" :style="labelStyle" :for="fieldId">
       {{ label }}
     </label>
     <div class="wt-form-item__content">
-      <slot />
-      <p v-if="props.error || errorMessage" class="wt-form-item__error">
+      <slot :id="fieldId" :aria-describedby="errorId" />
+      <p
+        v-if="props.error || errorMessage"
+        :id="errorId"
+        class="wt-form-item__error"
+        role="alert"
+      >
         {{ props.error || errorMessage }}
       </p>
     </div>

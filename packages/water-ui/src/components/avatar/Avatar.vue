@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { AvatarProps } from './props'
+import { resolveSize } from '../config-provider/context'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtAvatar' })
@@ -17,6 +19,20 @@ const props = withDefaults(defineProps<AvatarProps>(), {
 /* 响应式状态：图片是否加载失败 */
 const imgError = ref(false)
 
+/* 组件级高光参数（优先级高于全局配置） */
+const highlightStyle = useHighlightStyle(props)
+
+/* 图片地址变化时重置失败状态，保证新图可重新加载 */
+watch(
+  () => props.src,
+  () => {
+    imgError.value = false
+  }
+)
+
+/* 解析组件尺寸配置（数字尺寸保持原逻辑，命名尺寸支持全局配置） */
+const size = resolveSize(() => (typeof props.size === 'number' ? undefined : props.size))
+
 /* 派生状态：尺寸像素值 */
 const sizePx = computed(() => {
   if (typeof props.size === 'number') return `${props.size}px`
@@ -25,7 +41,7 @@ const sizePx = computed(() => {
     medium: '48px',
     large: '64px'
   }
-  return map[props.size] ?? '48px'
+  return map[size.value] ?? '48px'
 })
 
 /* 派生状态：字号 */
@@ -57,7 +73,7 @@ const handleError = () => {
 </script>
 
 <template>
-  <span :class="classes" :style="{ width: sizePx, height: sizePx, fontSize: fontPx }">
+  <span :class="classes" :style="[highlightStyle, { width: sizePx, height: sizePx, fontSize: fontPx }]">
     <img
       v-if="showImage"
       class="wt-avatar__img"
@@ -73,6 +89,8 @@ const handleError = () => {
 </template>
 
 <style scoped lang="scss">
+@use '@water-ui/theme/src/mixins/index.scss' as wt;
+
 .wt-avatar {
   /* 定位方式 */
   position: relative;
@@ -84,24 +102,12 @@ const handleError = () => {
   align-items: center;
   /* 溢出裁剪 */
   overflow: hidden;
-  /* 背景 */
-  background: linear-gradient(
-    145deg,
-    rgba(0, 0, 0, var(--wt-shadow-dark-alpha)),
-    rgba(0, 0, 0, var(--wt-shadow-dark-alpha-strong))
-  );
-  /* 水滴内外部阴影层次 */
-  box-shadow:
-    inset 3px 4px 8px rgba(0, 0, 0, 0.15),
-    inset -2px -2px 5px var(--wt-shadow-light),
-    3px 4px 12px rgba(0, 0, 0, 0.1),
-    0 1px 4px rgba(0, 0, 0, 0.06);
+  /* 水滴表面：背景渐变 + 内外阴影层次 + 文本阴影 */
+  @include wt.wt-liquid-surface;
   /* 文本颜色 */
   color: var(--wt-text);
   /* 字重 */
   font-weight: 600;
-  /* 文本阴影 */
-  text-shadow: var(--wt-text-shadow);
   /* 文本选中行为 */
   user-select: none;
 }

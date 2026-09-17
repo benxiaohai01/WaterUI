@@ -1,6 +1,8 @@
+import type { HighlightProps } from '../../utils/highlight'
+
 export type InputNumberSize = 'small' | 'medium' | 'large'
 
-export interface InputNumberProps {
+export interface InputNumberProps extends HighlightProps {
   modelValue?: number
   min?: number
   max?: number

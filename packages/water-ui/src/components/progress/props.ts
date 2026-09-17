@@ -1,7 +1,9 @@
+import type { HighlightProps } from '../../utils/highlight'
+
 export type ProgressType = 'line' | 'circle'
 export type ProgressStatus = 'normal' | 'success' | 'warning' | 'danger'
 
-export interface ProgressProps {
+export interface ProgressProps extends HighlightProps {
   /** 进度百分比（0-100） */
   percentage?: number
   /** 展示类型 */

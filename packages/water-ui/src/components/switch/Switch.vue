@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import type { SwitchProps } from './props'
 import { resolveSize } from '../config-provider/context'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtSwitch' })
@@ -23,6 +24,9 @@ const emit = defineEmits<{
 /* 解析组件尺寸配置 */
 const size = resolveSize(() => props.size)
 
+/* 组件级高光参数（优先级高于全局配置） */
+const highlightStyle = useHighlightStyle(props)
+
 /* 派生状态（计算属性） */
 const isChecked = computed(() => props.modelValue)
 
@@ -39,6 +43,7 @@ const toggle = () => {
   <button
     class="wt-switch"
     :class="[`wt-switch--${size}`, { 'is-checked': isChecked, 'is-disabled': disabled }]"
+    :style="highlightStyle"
     type="button"
     role="switch"
     :aria-checked="isChecked"
@@ -54,7 +59,25 @@ const toggle = () => {
   </button>
 </template>
 <style scoped lang="scss">
+@use '@water-ui/theme/src/mixins/index.scss' as wt;
+
 .wt-switch {
+  /* 高光尺寸（随全局基准等比缩放，11px / 12px）：声明在根元素，便于组件 props 覆盖 */
+  --wt-highlight-size: calc(var(--wt-highlight-size-base) * 0.9167);
+  /* 次高光尺寸（随全局基准等比缩放，6px / 12px） */
+  --wt-highlight-small-size: calc(var(--wt-highlight-size-base) * 0.5);
+  /* 主次高光间距 */
+  --wt-highlight-group-gap: 4px;
+  /* 高光内边距（随全局偏移等比缩放，3px / 8px） */
+  --wt-highlight-inset: calc(var(--wt-highlight-offset) * 0.375);
+  /* 高光顶部定位（min 仅用于收束到轨道内，不钳制全局基准） */
+  --wt-highlight-top: min(var(--wt-highlight-inset), calc(100% - var(--wt-highlight-size) - 3px));
+  /* 高光右侧定位（min 仅用于收束到轨道内，不钳制全局基准） */
+  --wt-highlight-right: min(var(--wt-highlight-inset), calc(100% - var(--wt-highlight-size) - 3px));
+  /* 次高光顶部定位 */
+  --wt-highlight-small-top: min(calc(min(var(--wt-highlight-inset), calc(100% - var(--wt-highlight-size) - 4px)) + var(--wt-highlight-size) + var(--wt-highlight-group-gap)), calc(100% - var(--wt-highlight-small-size) - 3px));
+  /* 次高光右侧定位 */
+  --wt-highlight-small-right: min(calc(min(var(--wt-highlight-inset), calc(100% - var(--wt-highlight-size) - 4px)) + var(--wt-highlight-size) + var(--wt-highlight-group-gap)), calc(100% - var(--wt-highlight-small-size) - 3px));
   /* 盒模型显示方式 */
   display: inline-flex;
   /* 交叉轴对齐方式 */
@@ -80,22 +103,6 @@ const toggle = () => {
   isolation: isolate;
   /* 盒模型显示方式 */
   display: inline-flex;
-  /* 高光尺寸 */
-  --wt-highlight-size: 11px;
-  /* 次高光尺寸 */
-  --wt-highlight-small-size: 6px;
-  /* 主次高光间距 */
-  --wt-highlight-group-gap: 4px;
-  /* 高光内边距 */
-  --wt-highlight-inset: 3px;
-  /* 高光顶部定位 */
-  --wt-highlight-top: min(var(--wt-highlight-inset), calc(100% - var(--wt-highlight-size) - 3px));
-  /* 高光右侧定位 */
-  --wt-highlight-right: min(var(--wt-highlight-inset), calc(100% - var(--wt-highlight-size) - 3px));
-  /* 次高光顶部定位 */
-  --wt-highlight-small-top: min(calc(var(--wt-highlight-top) + var(--wt-highlight-size) + var(--wt-highlight-group-gap)), calc(100% - var(--wt-highlight-small-size) - 3px));
-  /* 次高光右侧定位 */
-  --wt-highlight-small-right: min(calc(var(--wt-highlight-right) + var(--wt-highlight-size) + var(--wt-highlight-group-gap)), calc(100% - var(--wt-highlight-small-size) - 3px));
   /* 宽度 */
   width: 56px;
   /* 高度 */
@@ -116,12 +123,10 @@ const toggle = () => {
     inset -1px -1px 3px var(--wt-shadow-light),
     2px 3px 8px rgba(0, 0, 0, 0.08),
     0 1px 3px rgba(0, 0, 0, 0.05);
-  /* 动画 */
-  animation: wt-liquid-flow var(--wt-motion-normal) ease-in-out infinite;
-  /* 动画性能提示 */
-  will-change: border-radius;
+  /* 液体形变动画（含 will-change: border-radius） */
+  @include wt.wt-liquid-animation(wt-liquid-flow, var(--wt-motion-normal), border-radius);
   /* 过渡动画 */
-  transition: background 0.35s ease, box-shadow 0.35s ease;
+  transition: background var(--wt-motion-base) ease, box-shadow var(--wt-motion-base) ease;
 }
 
 .wt-switch__track::after {
@@ -134,9 +139,9 @@ const toggle = () => {
   /* 高度 */
   height: var(--wt-highlight-size);
   /* 顶部偏移 */
-  top: var(--wt-highlight-top);
+  top: min(var(--wt-highlight-inset), calc(100% - var(--wt-highlight-size) - 4px));
   /* 右侧偏移 */
-  right: var(--wt-highlight-right);
+  right: min(var(--wt-highlight-inset), calc(100% - var(--wt-highlight-size) - 4px));
   /* 背景 */
   background: var(--wt-highlight);
   /* 圆角，塑造水滴/液体轮廓 */
@@ -159,9 +164,9 @@ const toggle = () => {
   /* 高度 */
   height: var(--wt-highlight-small-size);
   /* 顶部偏移 */
-  top: var(--wt-highlight-small-top);
+  top: min(calc(var(--wt-highlight-inset) + var(--wt-highlight-size) + var(--wt-highlight-group-gap)), calc(100% - var(--wt-highlight-small-size) - 4px));
   /* 右侧偏移 */
-  right: var(--wt-highlight-small-right);
+  right: min(calc(var(--wt-highlight-inset) + var(--wt-highlight-size) + var(--wt-highlight-group-gap)), calc(100% - var(--wt-highlight-small-size) - 4px));
   /* 背景 */
   background: var(--wt-highlight-small);
   /* 圆角，塑造水滴/液体轮廓 */
@@ -195,7 +200,7 @@ const toggle = () => {
     inset -2px -2px 5px rgba(255, 255, 255, 0.25),
     2px 3px 8px rgba(0, 0, 0, 0.2);
   /* 过渡动画 */
-  transition: left 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.35s ease;
+  transition: left var(--wt-motion-base) cubic-bezier(0.34, 1.56, 0.64, 1), background var(--wt-motion-base) ease;
 }
 
 .wt-switch.is-checked .wt-switch__track {
@@ -221,11 +226,13 @@ const toggle = () => {
   font-size: 14px;
 }
 
+.wt-switch--small {
+  /* 高光尺寸（随全局基准等比缩放，8px / 12px）：声明在根元素，便于组件 props 覆盖 */
+  --wt-highlight-size: calc(var(--wt-highlight-size-base) * 0.6667);
+  /* 次高光尺寸（随全局基准等比缩放，5px / 12px） */
+  --wt-highlight-small-size: calc(var(--wt-highlight-size-base) * 0.4167);
+}
 .wt-switch--small .wt-switch__track {
-  /* 高光尺寸 */
-  --wt-highlight-size: 8px;
-  /* 次高光尺寸 */
-  --wt-highlight-small-size: 5px;
   /* 宽度 */
   width: 42px;
   /* 高度 */
@@ -241,11 +248,13 @@ width: 18px;
 /* 左侧偏移 */
 left: 21px;
 }
+.wt-switch--large {
+  /* 高光尺寸（随全局基准等比缩放，13px / 12px）：声明在根元素，便于组件 props 覆盖 */
+  --wt-highlight-size: calc(var(--wt-highlight-size-base) * 1.0833);
+  /* 次高光尺寸（随全局基准等比缩放，7px / 12px） */
+  --wt-highlight-small-size: calc(var(--wt-highlight-size-base) * 0.5833);
+}
 .wt-switch--large .wt-switch__track {
-  /* 高光尺寸 */
-  --wt-highlight-size: 13px;
-  /* 次高光尺寸 */
-  --wt-highlight-small-size: 7px;
   /* 宽度 */
   width: 68px;
   /* 高度 */

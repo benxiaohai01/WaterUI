@@ -1,4 +1,6 @@
-export interface DescriptionsProps {
+import type { HighlightProps } from '../../utils/highlight'
+
+export interface DescriptionsProps extends HighlightProps {
   /** 标题 */
   title?: string
   /** 每行显示的列数 */

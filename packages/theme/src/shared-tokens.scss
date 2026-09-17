@@ -12,6 +12,17 @@
   --wt-motion-normal: 3.8s;
   /* 慢速动画时长令牌 */
   --wt-motion-slow: 5.8s;
+  /* 微交互时长令牌（入场、过渡） */
+  --wt-motion-fast: 0.2s;
+  /* 浮层入场/退场时长令牌 */
+  --wt-motion-base: 0.28s;
+
+  /* 阴影层级透明度：由全局「阴影深度」直接写入（默认 0.04 基准的三档取值） */
+  --wt-shadow-inset-alpha: 0.15;
+  /* 外部投影透明度 */
+  --wt-shadow-cast-alpha: 0.1;
+  /* 接触面阴影透明度 */
+  --wt-shadow-contact-alpha: 0.06;
 
   /* 高光安全边距 */
   --wt-highlight-safe-margin: 8px;

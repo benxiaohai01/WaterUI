@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, reactive, watch } from 'vue'
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import type { MenuProps } from './props'
 import { provideMenu, type SubMenuRegistration } from './context'
 import { useUid } from '../../utils/uid'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtMenu' })
@@ -28,17 +29,22 @@ const emit = defineEmits<{
 
 const uid = useUid('wt-menu')
 
+/* 组件级高光参数（优先级高于全局配置） */
+const highlightStyle = useHighlightStyle(props)
+
 /* 响应式状态：已注册的子菜单 */
 const subMenus = reactive<SubMenuRegistration[]>([])
 
 /* 响应式状态：展开的子菜单集合 */
 const opened = reactive<string[]>([])
 
-/* 派生状态：当前激活标识 */
+/* 响应式状态：内部激活标识（非受控兜底，默认取 defaultActive） */
+const innerActive = ref<string>(props.defaultActive ?? '')
+
+/* 派生状态：当前激活标识（外部传入 modelValue 时以外部为准） */
 const activeIndex = computed<string>(() => {
   if (props.modelValue !== undefined) return props.modelValue
-  if (props.defaultActive !== undefined) return props.defaultActive
-  return ''
+  return innerActive.value
 })
 
 /* 提供上下文 */
@@ -71,8 +77,10 @@ provideMenu({
     if (openIndex !== -1) opened.splice(openIndex, 1)
   },
   select: (index) => {
-    if (index === activeIndex.value) return
-    emit('update:modelValue', index)
+    /* 非受控场景：先更新内部状态，保证点击后高亮即时生效 */
+    if (props.modelValue === undefined) innerActive.value = index
+    /* 激活项变化才派发双向绑定；重复点击当前项仍派发 select */
+    if (index !== activeIndex.value) emit('update:modelValue', index)
     emit('select', index)
   },
   toggleOpen: (index) => {
@@ -111,13 +119,25 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <ul :class="classes" role="menu" :aria-label="uid">
+  <ul :class="classes" :style="highlightStyle" role="menu" :aria-label="uid">
     <slot />
   </ul>
 </template>
 
 <style scoped lang="scss">
 .wt-menu {
+  /* 高光尺寸（随全局基准等比缩放，6px / 12px）：声明在根元素，便于组件 props 覆盖 */
+  --wt-highlight-size: calc(var(--wt-highlight-size-base) * 0.5);
+  /* 次高光尺寸（随全局基准等比缩放，3px / 12px） */
+  --wt-highlight-small-size: calc(var(--wt-highlight-size-base) * 0.25);
+  /* 高光内边距（随全局偏移等比缩放，3px / 8px） */
+  --wt-highlight-inset: calc(var(--wt-highlight-offset) * 0.375);
+  /* 主高光定位：右上角 */
+  --wt-highlight-top: var(--wt-highlight-inset);
+  --wt-highlight-right: var(--wt-highlight-inset);
+  /* 次高光定位：右下角，避让菜单文字 */
+  --wt-highlight-small-top: calc(100% - var(--wt-highlight-small-size) - var(--wt-highlight-inset));
+  --wt-highlight-small-right: var(--wt-highlight-inset);
   /* 外边距 */
   margin: 0;
   /* 内边距 */
@@ -172,7 +192,7 @@ onBeforeUnmount(() => {
 }
 
 /* 水平模式子菜单面板：悬浮弹出 */
-.wt-menu--horizontal .wt-sub-menu__panel {
+.wt-menu--horizontal :deep(.wt-sub-menu__panel) {
   /* 定位方式 */
   position: absolute;
   /* 顶部偏移 */

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import type { PopoverProps } from './props'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtPopover' })
@@ -16,8 +17,28 @@ const props = withDefaults(defineProps<PopoverProps>(), {
   customClass: ''
 })
 
-/* 响应式状态：浮层可见性 */
-const visible = ref(false)
+/* 声明组件事件 */
+const emit = defineEmits<{
+  'update:visible': [value: boolean]
+}>()
+
+/* 响应式状态：内部可见性（visible 未受控时兜底） */
+const innerVisible = ref(false)
+
+/* 响应式状态：根节点引用（用于判定点击是否在外部） */
+const rootRef = ref<HTMLElement>()
+
+/* 组件级高光参数（优先级高于全局配置）；高光渲染在气泡面板上，故绑定到面板元素 */
+const highlightStyle = useHighlightStyle(props)
+
+/* 派生状态：浮层可见性（受控优先，兼作读写入口） */
+const visible = computed({
+  get: () => props.visible ?? innerVisible.value,
+  set: (value: boolean) => {
+    innerVisible.value = value
+    emit('update:visible', value)
+  }
+})
 
 /* 派生状态：浮层类名 */
 const classes = computed(() => [
@@ -37,22 +58,52 @@ const hide = () => {
   if (props.trigger === 'hover' || !props.disabled) visible.value = false
 }
 
-/* 交互处理逻辑：点击切换浮层 */
+/* 交互处理逻辑：点击触发元素切换浮层 */
 const toggle = () => {
   if (props.disabled) return
   visible.value = !visible.value
 }
+
+/* 交互处理逻辑：Esc 关闭浮层 */
+const handleKeydown = (event: KeyboardEvent) => {
+  if (event.key === 'Escape') hide()
+}
+
+/* 交互处理逻辑：点击外部关闭浮层 */
+const handleOutside = (event: PointerEvent) => {
+  if (rootRef.value && !rootRef.value.contains(event.target as Node)) hide()
+}
+
+/* 生命周期：仅在展开时注册全局监听，关闭时移除 */
+watch(visible, (value) => {
+  if (typeof document === 'undefined') return
+  if (value) {
+    document.addEventListener('keydown', handleKeydown)
+    document.addEventListener('pointerdown', handleOutside)
+  } else {
+    document.removeEventListener('keydown', handleKeydown)
+    document.removeEventListener('pointerdown', handleOutside)
+  }
+})
+
+/* 生命周期：卸载时移除全局监听 */
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', handleKeydown)
+  document.removeEventListener('pointerdown', handleOutside)
+})
 </script>
 
 <template>
   <span
+    ref="rootRef"
     class="wt-popover-wrap"
     @mouseenter="trigger === 'hover' && show()"
     @mouseleave="trigger === 'hover' && hide()"
-    @click="trigger === 'click' && toggle()"
   >
-    <slot />
-    <section :class="classes" :style="{ width }" role="dialog">
+    <span class="wt-popover__trigger" @click="trigger === 'click' && toggle()">
+      <slot />
+    </span>
+    <section :class="classes" :style="[highlightStyle, { width }]" :aria-hidden="!visible" role="dialog">
       <h4 v-if="title">{{ title }}</h4>
       <div class="wt-popover__content">
         <slot name="content">{{ content }}</slot>
@@ -72,7 +123,18 @@ const toggle = () => {
   display: inline-flex;
 }
 
+.wt-popover__trigger {
+  /* 盒模型显示方式 */
+  display: inline-flex;
+}
+
 .wt-popover {
+  /* 高光尺寸（随全局基准等比缩放） */
+  --wt-highlight-size: calc(var(--wt-highlight-size-base) * 1.0000);
+  /* 次高光尺寸 */
+  --wt-highlight-small-size: calc(var(--wt-highlight-size-base) * 0.5);
+  /* 高光内边距（随全局偏移等比缩放） */
+  --wt-highlight-inset: calc(var(--wt-highlight-offset) * 1.0000);
   /* 定位方式 */
   position: absolute;
   /* 层叠层级 */
@@ -94,10 +156,13 @@ const toggle = () => {
   color: var(--wt-text);
   /* 过渡动画 */
   transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
+    opacity var(--wt-motion-fast) ease,
+    transform var(--wt-motion-fast) ease,
+    visibility var(--wt-motion-fast);
   /* 透明度 */
   opacity: 0;
+  /* 可见性：隐藏态不可聚焦且不进入无障碍树 */
+  visibility: hidden;
   /* 是否响应鼠标事件 */
   pointer-events: none;
 }
@@ -105,6 +170,8 @@ const toggle = () => {
 .wt-popover.is-visible {
   /* 透明度 */
   opacity: 1;
+  /* 可见性 */
+  visibility: visible;
   /* 是否响应鼠标事件 */
   pointer-events: auto;
 }
@@ -125,9 +192,9 @@ const toggle = () => {
   /* 高度 */
   height: var(--wt-highlight-small-size);
   /* 顶部偏移 */
-  top: var(--wt-highlight-small-top);
+  top: min(calc(var(--wt-highlight-inset) + var(--wt-highlight-size) + var(--wt-highlight-group-gap)), calc(100% - var(--wt-highlight-small-size) - 4px));
   /* 右侧偏移 */
-  right: var(--wt-highlight-small-right);
+  right: min(calc(var(--wt-highlight-inset) + var(--wt-highlight-size) + var(--wt-highlight-group-gap)), calc(100% - var(--wt-highlight-small-size) - 4px));
   /* 背景 */
   background: var(--wt-highlight-small);
   /* 圆角，塑造水滴/液体轮廓 */

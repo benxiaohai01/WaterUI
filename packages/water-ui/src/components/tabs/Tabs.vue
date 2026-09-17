@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import type { TabsProps } from './props'
 import { provideTabs, type TabPaneRegistration } from './context'
 import { useUid } from '../../utils/uid'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtTabs' })
@@ -29,18 +30,44 @@ const emit = defineEmits<{
 
 const uid = useUid('wt-tabs')
 
+/* 组件级高光参数（优先级高于全局配置） */
+const highlightStyle = useHighlightStyle(props)
+
 /* 响应式状态：已注册的选项卡面板 */
 const panes = reactive<TabPaneRegistration[]>([])
 
-/* 派生状态：当前激活标识 */
+/* 响应式状态：非受控模式下的内部激活标识 */
+const innerActive = ref<string | number | undefined>(props.defaultActive)
+
+/* 派生状态：当前激活标识（受控优先，其次内部状态，最后首个面板） */
 const activeName = computed<string | number>(() => {
   if (props.modelValue !== undefined) return props.modelValue
-  if (props.defaultActive !== undefined) return props.defaultActive
+  if (innerActive.value !== undefined) return innerActive.value
   return panes[0]?.name ?? ''
 })
 
+/* 交互处理逻辑：选中选项卡 */
+const selectPane = (name: string | number) => {
+  const pane = panes.find((p) => p.name === name)
+  if (!pane || pane.disabled || name === activeName.value) return
+  innerActive.value = name
+  emit('update:modelValue', name)
+  emit('change', name)
+}
+
+/* 交互处理逻辑：关闭选项卡 */
+const closePane = (name: string | number) => {
+  emit('close', name)
+}
+
+/* 交互处理逻辑：新增选项卡 */
+const addPane = () => {
+  emit('add')
+}
+
 /* 提供上下文 */
 provideTabs({
+  id: uid,
   get type() {
     return props.type
   },
@@ -66,18 +93,13 @@ provideTabs({
     const index = panes.findIndex((pane) => pane.name === name)
     if (index !== -1) panes.splice(index, 1)
   },
-  select: (name) => {
+  update: (name, patch) => {
     const pane = panes.find((p) => p.name === name)
-    if (!pane || pane.disabled || name === activeName.value) return
-    emit('update:modelValue', name)
-    emit('change', name)
+    if (pane) Object.assign(pane, patch)
   },
-  close: (name) => {
-    emit('close', name)
-  },
-  add: () => {
-    emit('add')
-  }
+  select: selectPane,
+  close: closePane,
+  add: addPane
 })
 
 /* 派生状态：导航类名 */
@@ -106,9 +128,9 @@ const handleKeydown = (event: KeyboardEvent) => {
   const currentIndex = enabled.findIndex((pane) => pane.name === activeName.value)
   let nextIndex = currentIndex
   if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
-    nextIndex = (currentIndex + 1) % enabled.length
+    nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % enabled.length
   } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
-    nextIndex = (currentIndex - 1 + enabled.length) % enabled.length
+    nextIndex = currentIndex < 0 ? enabled.length - 1 : (currentIndex - 1 + enabled.length) % enabled.length
   } else if (event.key === 'Home') {
     nextIndex = 0
   } else if (event.key === 'End') {
@@ -117,43 +139,24 @@ const handleKeydown = (event: KeyboardEvent) => {
   event.preventDefault()
   const next = enabled[nextIndex]
   if (next && next.name !== activeName.value) {
-    emit('update:modelValue', next.name)
-    emit('change', next.name)
+    selectPane(next.name)
   }
 }
 
 watch(
   () => panes.length,
   () => {
-    /* 若当前激活项被移除且仍有剩余面板，自动切换到第一项 */
-    if (
-      props.modelValue !== undefined &&
-      !panes.some((pane) => pane.name === props.modelValue) &&
-      panes.length > 0
-    ) {
-      emit('update:modelValue', panes[0].name)
-      emit('change', panes[0].name)
+    /* 当前激活项被移除时自动切换到第一项（非受控下同步内部状态） */
+    if (!panes.length) return
+    if (panes.some((pane) => pane.name === activeName.value)) return
+    const nextName = panes[0].name
+    innerActive.value = nextName
+    if (props.modelValue !== undefined) {
+      emit('update:modelValue', nextName)
+      emit('change', nextName)
     }
   }
 )
-
-/* 交互处理逻辑：选中选项卡 */
-const select = (name: string | number) => {
-  const pane = panes.find((p) => p.name === name)
-  if (!pane || pane.disabled || name === activeName.value) return
-  emit('update:modelValue', name)
-  emit('change', name)
-}
-
-/* 交互处理逻辑：关闭选项卡 */
-const close = (name: string | number) => {
-  emit('close', name)
-}
-
-/* 交互处理逻辑：新增选项卡 */
-const add = () => {
-  emit('add')
-}
 
 onBeforeUnmount(() => {
   panes.splice(0)
@@ -161,7 +164,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div :class="classes">
+  <div :class="classes" :style="highlightStyle">
     <div class="wt-tabs__header" role="tablist" :aria-orientation="position === 'top' || position === 'bottom' ? 'horizontal' : 'vertical'">
       <div ref="navRef" :class="navClasses" @keydown="handleKeydown">
         <button
@@ -176,9 +179,10 @@ onBeforeUnmount(() => {
           }"
           role="tab"
           :aria-selected="pane.name === activeName"
+          :aria-controls="`${uid}-panel-${String(pane.name)}`"
           :aria-disabled="pane.disabled"
           :tabindex="pane.name === activeName ? 0 : -1"
-          @click="select(pane.name)"
+          @click="selectPane(pane.name)"
         >
           <slot :name="`label-${String(pane.name)}`" :pane="pane">{{ pane.label }}</slot>
           <span
@@ -186,7 +190,7 @@ onBeforeUnmount(() => {
             class="wt-tabs__close"
             role="button"
             aria-label="关闭"
-            @click.stop="close(pane.name)"
+            @click.stop="closePane(pane.name)"
           >
             ×
           </span>
@@ -197,7 +201,7 @@ onBeforeUnmount(() => {
           type="button"
           class="wt-tabs__add"
           aria-label="新增选项卡"
-          @click="add"
+          @click="addPane"
         >
           +
         </button>
@@ -211,7 +215,21 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped lang="scss">
+@use '@water-ui/theme/src/mixins/index.scss' as wt;
+
 .wt-tabs {
+  /* 高光尺寸（随全局基准等比缩放，6px / 12px）：声明在根元素，便于组件 props 覆盖 */
+  --wt-highlight-size: calc(var(--wt-highlight-size-base) * 0.5);
+  /* 次高光尺寸（随全局基准等比缩放，3px / 12px） */
+  --wt-highlight-small-size: calc(var(--wt-highlight-size-base) * 0.25);
+  /* 高光内边距（随全局偏移等比缩放，3px / 8px） */
+  --wt-highlight-inset: calc(var(--wt-highlight-offset) * 0.375);
+  /* 主高光定位：右上角 */
+  --wt-highlight-top: var(--wt-highlight-inset);
+  --wt-highlight-right: var(--wt-highlight-inset);
+  /* 次高光定位：右下角，避让标签文字 */
+  --wt-highlight-small-top: calc(100% - var(--wt-highlight-small-size) - var(--wt-highlight-inset));
+  --wt-highlight-small-right: var(--wt-highlight-inset);
   /* 盒模型显示方式 */
   display: flex;
   /* 排列方向 */
@@ -311,9 +329,9 @@ onBeforeUnmount(() => {
   cursor: pointer;
   /* 过渡动画 */
   transition:
-    background 0.2s ease,
-    color 0.2s ease,
-    transform 0.2s ease;
+    background var(--wt-motion-fast) ease,
+    color var(--wt-motion-fast) ease,
+    transform var(--wt-motion-fast) ease;
 }
 
 .wt-tabs__tab:hover:not(.is-disabled) {
@@ -324,6 +342,12 @@ onBeforeUnmount(() => {
 }
 
 .wt-tabs__tab.is-active {
+  /* 水滴高光：定位方式 + 独立层叠上下文 + 主/次高光伪元素（层叠层级 2） */
+  @include wt.wt-liquid-highlights(2);
+  /* 溢出裁剪方式（高光收束在标签内） */
+  overflow: hidden;
+  /* 液体形变动画（含 will-change: border-radius） */
+  @include wt.wt-liquid-animation(wt-liquid-flow, var(--wt-motion-normal), border-radius);
   /* 背景 */
   background: linear-gradient(
     145deg,
@@ -406,8 +430,8 @@ onBeforeUnmount(() => {
   cursor: pointer;
   /* 过渡动画 */
   transition:
-    background 0.2s ease,
-    color 0.2s ease;
+    background var(--wt-motion-fast) ease,
+    color var(--wt-motion-fast) ease;
 }
 
 .wt-tabs__add:hover {

@@ -413,12 +413,48 @@ export const componentDemos: Record<string, DemoItem[]> = {
   'config-provider': [
     {
       title: '全局配置',
-      description: '为后代组件统一提供尺寸和主题配置。',
+      description: '通过 useGlobalTheme 写入根元素 CSS 变量，统一调整高光、动画与阴影参数。',
       component: ConfigProviderDemo,
-      code: `<wt-config-provider size="large">
-  <wt-button type="primary">Large 按钮</wt-button>
-  <wt-switch active-text="可用开关" />
-</wt-config-provider>`
+      code: `<script setup lang="ts">
+import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { resetGlobalTheme, startGlobalTheme, useGlobalTheme } from '@/composables/useGlobalTheme'
+
+const theme = useGlobalTheme()
+const demoText = ref('')
+const demoSwitch = ref(true)
+
+let stopGlobalTheme: (() => void) | null = null
+
+onMounted(() => {
+  stopGlobalTheme = startGlobalTheme()
+})
+
+onBeforeUnmount(() => {
+  stopGlobalTheme?.()
+  resetGlobalTheme()
+})
+</script>
+
+<template>
+  <wt-slider v-model="theme.highlightSize" :min="5" :max="14" :step="1" show-value />
+  <wt-slider v-model="theme.highlightOpacity" :min="0.3" :max="1" :step="0.05" show-value />
+  <wt-slider v-model="theme.highlightOffset" :min="0" :max="12" :step="1" show-value />
+  <wt-slider v-model="theme.motion" :min="2" :max="7" :step="0.1" show-value />
+  <wt-slider v-model="theme.shadowAlpha" :min="0.01" :max="0.12" :step="0.005" show-value />
+
+  <wt-space wrap :size="12">
+    <wt-button type="primary">Primary</wt-button>
+    <wt-button type="success">Success</wt-button>
+    <wt-button type="danger">Danger</wt-button>
+  </wt-space>
+
+  <wt-input v-model="demoText" placeholder="输入框预览" />
+
+  <wt-space wrap :size="12">
+    <wt-tag type="primary">标签</wt-tag>
+    <wt-switch v-model="demoSwitch" />
+  </wt-space>
+</template>`
     }
   ],
   menu: [

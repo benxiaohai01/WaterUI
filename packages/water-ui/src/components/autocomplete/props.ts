@@ -1,3 +1,5 @@
+import type { HighlightProps } from '../../utils/highlight'
+
 export type AutocompleteSize = 'small' | 'medium' | 'large'
 
 export interface AutocompleteOption {
@@ -5,7 +7,7 @@ export interface AutocompleteOption {
   value: string | number
 }
 
-export interface AutocompleteProps {
+export interface AutocompleteProps extends HighlightProps {
   modelValue?: string | number
   suggestions?: Array<string | AutocompleteOption>
   placeholder?: string

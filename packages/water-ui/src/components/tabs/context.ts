@@ -13,6 +13,8 @@ export interface TabPaneRegistration {
 }
 
 export interface TabsContext {
+  /** Tabs 实例 id（用于建立 tab 与 panel 的 aria 关联） */
+  id: string
   type: TabsType
   activeName: string | number
   closable: boolean
@@ -21,6 +23,7 @@ export interface TabsContext {
   panes: TabPaneRegistration[]
   register: (pane: TabPaneRegistration) => void
   unregister: (name: string | number) => void
+  update: (name: string | number, patch: Partial<Omit<TabPaneRegistration, 'name'>>) => void
   select: (name: string | number) => void
   close: (name: string | number) => void
   add: () => void

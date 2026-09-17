@@ -1,7 +1,9 @@
+import type { HighlightProps } from '../../utils/highlight'
+
 export type AvatarSize = 'small' | 'medium' | 'large' | number
 export type AvatarShape = 'circle' | 'square' | 'liquid'
 
-export interface AvatarProps {
+export interface AvatarProps extends HighlightProps {
   /** 头像尺寸：small / medium / large 或具体像素 */
   size?: AvatarSize
   /** 头像形状：circle / square / liquid（水滴形） */

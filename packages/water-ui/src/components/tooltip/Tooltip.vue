@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import type { TooltipProps } from './props'
+import { useUid } from '../../utils/uid'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtTooltip' })
@@ -16,6 +18,12 @@ const props = withDefaults(defineProps<TooltipProps>(), {
 
 /* 响应式状态：浮层可见性 */
 const visible = ref(false)
+
+/* 组件级高光参数（优先级高于全局配置）；水滴表面在气泡上，故绑定到气泡元素 */
+const highlightStyle = useHighlightStyle(props)
+
+/* 派生状态：气泡元素 id，供触发器 aria-describedby 关联 */
+const tooltipId = useUid('wt-tooltip')
 
 /* 派生状态：浮层类名 */
 const classes = computed(() => [
@@ -45,6 +53,7 @@ const toggle = () => {
 <template>
   <span
     class="wt-tooltip-wrap"
+    :aria-describedby="tooltipId"
     @mouseenter="trigger === 'hover' && show()"
     @mouseleave="trigger === 'hover' && hide()"
     @focusin="show"
@@ -52,7 +61,7 @@ const toggle = () => {
     @click="trigger === 'click' && toggle()"
   >
     <slot />
-    <span :class="classes" role="tooltip">
+    <span :id="tooltipId" :class="classes" :style="highlightStyle" :aria-hidden="!visible" role="tooltip">
       <slot name="content">{{ content }}</slot>
     </span>
   </span>
@@ -93,10 +102,13 @@ const toggle = () => {
   line-height: 1.5;
   /* 过渡动画 */
   transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
+    opacity var(--wt-motion-fast) ease,
+    transform var(--wt-motion-fast) ease,
+    visibility var(--wt-motion-fast);
   /* 透明度 */
   opacity: 0;
+  /* 可见性：隐藏态不可聚焦且不进入无障碍树 */
+  visibility: hidden;
   /* 是否响应鼠标事件 */
   pointer-events: none;
 }
@@ -104,6 +116,8 @@ const toggle = () => {
 .wt-tooltip.is-visible {
   /* 透明度 */
   opacity: 1;
+  /* 可见性 */
+  visibility: visible;
   /* 是否响应鼠标事件 */
   pointer-events: auto;
   /* 形变 */

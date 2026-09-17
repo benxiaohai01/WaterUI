@@ -1,6 +1,13 @@
+<script lang="ts">
+/* 模块级引用计数：多个引导实例共享 body 滚动锁，避免互相提前解锁 */
+let bodyLockCount = 0
+/* 首次加锁时保存的 body 溢出原值 */
+let originalBodyOverflow = ''
+</script>
+
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import type { TourProps } from './props'
+import type { TourProps, TourStep } from './props'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtTour' })
@@ -23,6 +30,7 @@ const emit = defineEmits<{
   'update:modelValue': [value: boolean]
   'update:current': [index: number]
   change: [index: number]
+  finish: []
   close: []
 }>()
 
@@ -30,41 +38,103 @@ const emit = defineEmits<{
 const targetRect = ref<DOMRect | null>(null)
 const stepIndex = ref(0)
 
+/* 当前实例是否持有 body 滚动锁（保证加锁/解锁成对） */
+let bodyLocked = false
+
 /* 派生状态：当前步骤 */
 const currentStep = computed(() => props.steps[stepIndex.value])
 
 /* 派生状态：是否为最后一步 */
 const isLast = computed(() => stepIndex.value >= props.steps.length - 1)
 
-/* 派生状态：气泡定位样式 */
+/* 派生状态：气泡居中样式（无目标元素或放置方式为 center 时使用） */
+const centerStyle = {
+  left: '50%',
+  top: '50%',
+  transform: 'translate(-50%, -50%)'
+}
+
+/* 视口安全边距与气泡间距 */
+const viewportMargin = 12
+const popupGap = 12
+
+/* 响应式状态：气泡元素引用与实际尺寸（受 CSS 最大宽高约束，超长内容在气泡内部滚动） */
+const popupEl = ref<HTMLElement>()
+const popupSize = ref({ width: 0, height: 0 })
+
+/* 测量气泡渲染尺寸：目标与步骤内容变化后都需要重新测量，用于视口夹取 */
+const measurePopup = () => {
+  const el = popupEl.value
+  if (!el) return
+  const width = el.offsetWidth
+  const height = el.offsetHeight
+  if (width === popupSize.value.width && height === popupSize.value.height) return
+  popupSize.value = { width, height }
+}
+
+/* 数值夹取 */
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), Math.max(min, max))
+
+/* 派生状态：气泡定位样式（先按 placement 定位，再翻转/夹取到视口内） */
 const popupStyle = computed(() => {
   const rect = targetRect.value
-  if (!rect) return {}
   const placement = currentStep.value?.placement ?? 'bottom'
-  const gap = 12
-  switch (placement) {
+  if (!rect || placement === 'center') return centerStyle
+
+  const { width, height } = popupSize.value
+  const viewportWidth = window.innerWidth
+  const viewportHeight = window.innerHeight
+
+  /* 主方向放不下时翻转：上下互转、左右互转 */
+  let direction: NonNullable<TourStep['placement']> = placement
+  if (placement === 'top' && rect.top - popupGap - height < viewportMargin) {
+    direction = 'bottom'
+  } else if (placement === 'bottom' && rect.bottom + popupGap + height > viewportHeight - viewportMargin) {
+    direction = 'top'
+  } else if (placement === 'left' && rect.left - popupGap - width < viewportMargin) {
+    direction = 'right'
+  } else if (placement === 'right' && rect.right + popupGap + width > viewportWidth - viewportMargin) {
+    direction = 'left'
+  }
+
+  let left = rect.left
+  let top = rect.top
+  switch (direction) {
     case 'top':
-      return { left: `${rect.left}px`, top: `${rect.top - gap}px`, transform: 'translateY(-100%)' }
+      top = rect.top - popupGap - height
+      break
     case 'right':
-      return { left: `${rect.right + gap}px`, top: `${rect.top}px` }
-    case 'bottom':
-      return { left: `${rect.left}px`, top: `${rect.bottom + gap}px` }
+      left = rect.right + popupGap
+      break
     case 'left':
-      return { left: `${rect.left - gap}px`, top: `${rect.top}px`, transform: 'translateX(-100%)' }
+      left = rect.left - popupGap - width
+      break
     default:
-      return { left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }
+      top = rect.bottom + popupGap
+  }
+
+  /* 目标贴边时继续夹取，保证气泡完整可见 */
+  return {
+    left: `${clamp(left, viewportMargin, viewportWidth - viewportMargin - width)}px`,
+    top: `${clamp(top, viewportMargin, viewportHeight - viewportMargin - height)}px`
   }
 })
 
-/* 派生状态：目标元素高亮框样式 */
+/* 派生状态：目标元素高亮框样式（相对视口定位，并夹取在视口内） */
 const highlightStyle = computed(() => {
   const rect = targetRect.value
   if (!rect) return {}
+  const inset = 4
+  const viewportWidth = window.innerWidth
+  const viewportHeight = window.innerHeight
+  const width = Math.min(rect.width + inset * 2, viewportWidth)
+  const height = Math.min(rect.height + inset * 2, viewportHeight)
   return {
-    left: `${rect.left - 4}px`,
-    top: `${rect.top - 4}px`,
-    width: `${rect.width + 8}px`,
-    height: `${rect.height + 8}px`
+    left: `${clamp(rect.left - inset, 0, viewportWidth - width)}px`,
+    top: `${clamp(rect.top - inset, 0, viewportHeight - height)}px`,
+    width: `${width}px`,
+    height: `${height}px`
   }
 })
 
@@ -83,19 +153,42 @@ const locateTarget = () => {
   targetRect.value = el.getBoundingClientRect()
 }
 
+/* 重新定位并测量气泡：步骤内容或目标变化都会影响气泡尺寸与位置 */
+const refreshPosition = () => {
+  locateTarget()
+  measurePopup()
+}
+
+/* 交互处理逻辑：锁定 body 滚动（引用计数，首次锁定时记录原值） */
+const lockBodyScroll = () => {
+  if (bodyLocked) return
+  bodyLocked = true
+  if (bodyLockCount === 0) originalBodyOverflow = document.body.style.overflow
+  bodyLockCount += 1
+  document.body.style.overflow = 'hidden'
+}
+
+/* 交互处理逻辑：解除 body 滚动锁（计数归零时还原原值） */
+const unlockBodyScroll = () => {
+  if (!bodyLocked) return
+  bodyLocked = false
+  bodyLockCount = Math.max(0, bodyLockCount - 1)
+  if (bodyLockCount === 0) document.body.style.overflow = originalBodyOverflow
+}
+
 /* 打开引导 */
 const open = () => {
   stepIndex.value = Math.min(Math.max(props.current, 0), Math.max(props.steps.length - 1, 0))
   emit('update:current', stepIndex.value)
-  nextTick(locateTarget)
-  document.body.style.overflow = 'hidden'
+  nextTick(refreshPosition)
+  lockBodyScroll()
 }
 
 /* 关闭引导 */
 const close = () => {
   emit('update:modelValue', false)
   emit('close')
-  document.body.style.overflow = ''
+  unlockBodyScroll()
 }
 
 /* 切换到指定步骤 */
@@ -104,12 +197,14 @@ const goTo = (index: number) => {
   stepIndex.value = next
   emit('update:current', next)
   emit('change', next)
-  nextTick(locateTarget)
+  nextTick(refreshPosition)
 }
 
 /* 下一步 */
 const next = () => {
   if (isLast.value) {
+    /* 最后一步：先抛出完成事件，再关闭引导 */
+    emit('finish')
     close()
     return
   }
@@ -135,16 +230,14 @@ const handleKeydown = (event: KeyboardEvent) => {
 
 /* 窗口尺寸变化时重新定位 */
 const handleResize = () => {
-  if (props.modelValue) locateTarget()
+  if (props.modelValue) refreshPosition()
 }
 
 watch(
   () => props.modelValue,
   (value) => {
     if (value) open()
-    else {
-      document.body.style.overflow = ''
-    }
+    else unlockBodyScroll()
   }
 )
 
@@ -153,7 +246,7 @@ watch(
   (value) => {
     if (value !== stepIndex.value) {
       stepIndex.value = value
-      nextTick(locateTarget)
+      nextTick(refreshPosition)
     }
   }
 )
@@ -167,7 +260,8 @@ onMounted(() => {
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', handleKeydown)
   window.removeEventListener('resize', handleResize)
-  document.body.style.overflow = ''
+  /* 卸载时解除滚动锁，避免残留锁定 */
+  unlockBodyScroll()
 })
 </script>
 
@@ -175,11 +269,11 @@ onBeforeUnmount(() => {
   <Teleport to="body">
     <Transition name="wt-tour">
       <div v-if="modelValue" class="wt-tour" :class="props.customClass">
-        <!-- 遮罩 -->
+        <!-- 遮罩：默认放行指针事件，使高亮目标可点击；无高亮时保留拦截以便点击关闭 -->
         <div
           v-if="mask"
           class="wt-tour__mask"
-          :style="{ background: maskColor }"
+          :style="{ background: maskColor, pointerEvents: targetRect ? 'none' : 'auto' }"
           @click="close"
         />
         <!-- 目标高亮框 -->
@@ -189,7 +283,7 @@ onBeforeUnmount(() => {
           :style="highlightStyle"
         />
         <!-- 步骤气泡 -->
-        <div class="wt-tour__popup" :style="popupStyle">
+        <div ref="popupEl" class="wt-tour__popup" :style="popupStyle">
           <span v-if="props.steps.length > 1" class="wt-tour__step-count">
             {{ stepIndex + 1 }} / {{ props.steps.length }}
           </span>
@@ -234,13 +328,19 @@ onBeforeUnmount(() => {
   position: absolute;
   /* 上下左右偏移合成属性 */
   inset: 0;
+  /* 层叠层级 */
+  z-index: 0;
   /* 背景 */
   background: rgba(0, 0, 0, 0.5);
+  /* 是否响应鼠标事件：放行指针，避免拦截高亮目标的点击 */
+  pointer-events: none;
 }
 
 .wt-tour__highlight {
   /* 定位方式 */
   position: absolute;
+  /* 层叠层级：置于遮罩之上，保证高亮区域可见 */
+  z-index: 1;
   /* 圆角，塑造水滴/液体轮廓 */
   border-radius: var(--wt-radius-md);
   /* 边框 */
@@ -250,7 +350,7 @@ onBeforeUnmount(() => {
     0 0 0 9999px v-bind('maskColor'),
     0 8px 30px rgba(0, 0, 0, 0.4);
   /* 过渡 */
-  transition: all 0.3s ease;
+  transition: all var(--wt-motion-base) ease;
   /* 是否响应鼠标事件 */
   pointer-events: none;
 }
@@ -258,8 +358,16 @@ onBeforeUnmount(() => {
 .wt-tour__popup {
   /* 定位方式 */
   position: absolute;
-  /* 最大宽度 */
-  max-width: 320px;
+  /* 层叠层级：气泡始终位于遮罩与高亮框之上 */
+  z-index: 2;
+  /* 最大宽度：预留视口安全边距，避免气泡被屏幕裁切 */
+  max-width: min(360px, calc(100vw - 24px));
+  /* 最大高度：超出视口时改为气泡内部滚动 */
+  max-height: calc(100vh - 24px);
+  /* 溢出处理方式：长内容在气泡内部滚动 */
+  overflow: auto;
+  /* 滚动边界行为：滚到边界不带动外层容器 */
+  overscroll-behavior: contain;
   /* 内边距 */
   padding: 18px 20px;
   /* 圆角，塑造水滴/液体轮廓 */
@@ -278,7 +386,7 @@ onBeforeUnmount(() => {
   /* 动画 */
   animation: wt-liquid-flow-subtle var(--wt-motion-slow) ease-in-out infinite;
   /* 过渡 */
-  transition: all 0.3s ease;
+  transition: all var(--wt-motion-base) ease;
 }
 
 .wt-tour__step-count {
@@ -326,7 +434,7 @@ onBeforeUnmount(() => {
 .wt-tour-enter-active,
 .wt-tour-leave-active {
   /* 过渡动画 */
-  transition: opacity 0.28s ease;
+  transition: opacity var(--wt-motion-base) ease;
 }
 
 .wt-tour-enter-from,

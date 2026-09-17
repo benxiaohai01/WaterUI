@@ -1,3 +1,5 @@
+import type { HighlightProps } from '../../utils/highlight'
+
 export interface UploadFile {
   name: string
   size?: number
@@ -5,7 +7,7 @@ export interface UploadFile {
   url?: string
 }
 
-export interface UploadProps {
+export interface UploadProps extends HighlightProps {
   modelValue?: UploadFile[]
   accept?: string
   multiple?: boolean

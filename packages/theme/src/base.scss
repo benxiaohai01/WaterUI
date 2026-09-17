@@ -28,5 +28,22 @@ body {
   /* 文本颜色 */
   color: var(--wt-text);
   /* 过渡动画 */
-  transition: background 0.25s ease, color 0.25s ease;
+  transition: background var(--wt-motion-fast) ease, color var(--wt-motion-fast) ease;
+}
+
+/* 尊重系统的减少动态效果偏好；
+   如需始终保留水滴动画，在 <html> 上声明 data-wt-motion="full" */
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-wt-motion='full']) *,
+  :root:not([data-wt-motion='full']) *::before,
+  :root:not([data-wt-motion='full']) *::after {
+    /* 动画时长 */
+    animation-duration: 0.01ms !important;
+    /* 动画循环次数 */
+    animation-iteration-count: 1 !important;
+    /* 过渡时长 */
+    transition-duration: 0.01ms !important;
+    /* 平滑滚动行为 */
+    scroll-behavior: auto !important;
+  }
 }

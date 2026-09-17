@@ -1,6 +1,8 @@
+import type { HighlightProps } from '../../utils/highlight'
+
 export type MessageBoxType = 'info' | 'success' | 'warning' | 'error'
 
-export interface MessageBoxProps {
+export interface MessageBoxProps extends HighlightProps {
   modelValue?: boolean
   title?: string
   message?: string

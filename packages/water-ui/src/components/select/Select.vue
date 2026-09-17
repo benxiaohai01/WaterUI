@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import type { SelectOption, SelectProps } from './props'
 import { provideSelectOptions, type SelectOptionValue } from './context'
 import { resolveSize } from '../config-provider/context'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtSelect' })
@@ -33,6 +34,9 @@ const selectRef = ref<HTMLDivElement>()
 
 /* 解析组件尺寸配置 */
 const size = resolveSize(() => props.size)
+
+/* 组件级高光参数（优先级高于全局配置） */
+const highlightStyle = useHighlightStyle(props)
 
 provideSelectOptions({
   register: (option) => {
@@ -66,33 +70,92 @@ const classes = computed(() => [
   props.customClass
 ])
 
+/* 可键盘导航的选项列表（跳过禁用项） */
+const enabledOptions = computed(() => mergedOptions.value.filter((option) => !option.disabled))
+const activeIndex = ref(-1)
+
 /* 交互处理逻辑 */
 const toggle = () => {
   if (props.disabled) return
   open.value = !open.value
+  activeIndex.value = -1
   emit('visibleChange', open.value)
 }
 
 /* 交互处理逻辑 */
-const select = (option: SelectOption) => {
-  if (props.disabled || option.disabled || option.value === props.modelValue) return
-  emit('update:modelValue', option.value)
-  emit('change', option.value)
+const close = () => {
+  if (!open.value) return
   open.value = false
+  activeIndex.value = -1
   emit('visibleChange', false)
 }
 
 /* 交互处理逻辑 */
+const select = (option: SelectOption) => {
+  if (props.disabled || option.disabled) return
+  if (option.value !== props.modelValue) {
+    emit('update:modelValue', option.value)
+    emit('change', option.value)
+  }
+  close()
+}
+
+/* 交互处理逻辑：移动键盘高亮 */
+const moveActive = (step: number) => {
+  const list = enabledOptions.value
+  if (!list.length) return
+  const base = activeIndex.value
+  activeIndex.value =
+    base < 0 ? (step > 0 ? 0 : list.length - 1) : (base + step + list.length) % list.length
+}
+
+/* 交互处理逻辑：键盘操作触发器 */
+const handleTriggerKeydown = (event: KeyboardEvent) => {
+  switch (event.key) {
+    case 'Enter':
+    case ' ':
+      event.preventDefault()
+      if (open.value && activeIndex.value >= 0) {
+        select(enabledOptions.value[activeIndex.value])
+      } else {
+        toggle()
+      }
+      break
+    case 'ArrowDown':
+      event.preventDefault()
+      if (!open.value) {
+        toggle()
+      } else {
+        moveActive(1)
+      }
+      break
+    case 'ArrowUp':
+      event.preventDefault()
+      if (!open.value) {
+        toggle()
+      } else {
+        moveActive(-1)
+      }
+      break
+    case 'Escape':
+      close()
+      break
+  }
+}
+
+/* 交互处理逻辑 */
 const clear = () => {
+  if (props.disabled) return
   emit('update:modelValue', '')
+  emit('change', '')
   emit('clear')
 }
 
 /* 交互处理逻辑 */
 const handleOutside = (event: PointerEvent) => {
+  if (!open.value) return
   if (selectRef.value && !selectRef.value.contains(event.target as Node)) {
-    open.value = false
-    emit('visibleChange', false)
+    close()
   }
 }
 
@@ -101,20 +164,26 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', handleOutside)
 </script>
 
 <template>
-  <div ref="selectRef" :class="classes">
+  <div ref="selectRef" :class="classes" :style="highlightStyle">
+    <div class="wt-select__shadow" aria-hidden="true">
+      <slot />
+    </div>
+
     <div
       class="wt-select__trigger"
       role="button"
       tabindex="0"
+      aria-haspopup="listbox"
+      :aria-expanded="open"
       :aria-disabled="disabled"
       @click="toggle"
-      @keydown.enter.prevent="toggle"
+      @keydown="handleTriggerKeydown"
     >
       <span class="wt-select__value" :class="{ 'is-placeholder': !display }">
         {{ display || placeholder }}
       </span>
       <button
-        v-if="clearable && modelValue !== undefined && String(modelValue) !== ''"
+        v-if="clearable && !disabled && modelValue !== undefined && String(modelValue) !== ''"
         class="wt-select__clear"
         type="button"
         aria-label="清空"
@@ -126,13 +195,20 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', handleOutside)
     </div>
 
     <div v-if="open" class="wt-select__dropdown">
-      <ul class="wt-select__list">
+      <ul class="wt-select__list" role="listbox">
         <li v-if="!mergedOptions.length" class="wt-select__empty">暂无选项</li>
         <li
           v-for="option in mergedOptions"
           :key="String(option.value)"
           class="wt-select__option"
-          :class="{ 'is-selected': option.value === modelValue, 'is-disabled': option.disabled }"
+          role="option"
+          :aria-selected="option.value === modelValue"
+          :aria-disabled="option.disabled"
+          :class="{
+            'is-selected': option.value === modelValue,
+            'is-disabled': option.disabled,
+            'is-active': option === enabledOptions[activeIndex]
+          }"
           @click="select(option)"
         >
           <slot name="option" :option="option">{{ option.label }}</slot>
@@ -142,17 +218,17 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', handleOutside)
   </div>
 </template>
 <style scoped lang="scss">
+@use '@water-ui/theme/src/mixins/index.scss' as wt;
+
 .wt-select {
-  /* 高光尺寸 */
-  --wt-highlight-size: min(var(--wt-highlight-size-base), 11px);
-  /* 次高光尺寸 */
-  --wt-highlight-small-size: min(calc(var(--wt-highlight-size-base) * 0.5), 6px);
-  /* 高光内边距 */
-  --wt-highlight-inset: min(var(--wt-highlight-offset), 6px);
-  /* 定位方式 */
-  position: relative;
-  /* 创建独立层叠上下文，隔离内部元素 */
-  isolation: isolate;
+  /* 高光尺寸（随全局基准等比缩放，11px / 12px） */
+  --wt-highlight-size: calc(var(--wt-highlight-size-base) * 0.9167);
+  /* 次高光尺寸（随全局基准等比缩放，6px / 12px） */
+  --wt-highlight-small-size: calc(var(--wt-highlight-size-base) * 0.5);
+  /* 高光内边距（随全局偏移等比缩放，6px / 8px） */
+  --wt-highlight-inset: calc(var(--wt-highlight-offset) * 0.75);
+  /* 水滴高光：定位方式 + 独立层叠上下文 + 主/次高光伪元素（层叠层级 1） */
+  @include wt.wt-liquid-highlights(1);
   /* 层叠层级 */
   z-index: 1;
   /* 宽度 */
@@ -211,56 +287,6 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', handleOutside)
   animation: wt-liquid-flow-subtle var(--wt-motion-slow) ease-in-out infinite;
 }
 
-.wt-select::after,
-.wt-select::before {
-  /* 伪元素内容 */
-  content: '';
-  /* 定位方式 */
-  position: absolute;
-  /* 是否响应鼠标事件 */
-  pointer-events: none;
-  /* 层叠层级 */
-  z-index: 1;
-}
-
-.wt-select::after {
-  /* 宽度 */
-  width: var(--wt-highlight-size);
-  /* 高度 */
-  height: var(--wt-highlight-size);
-  /* 顶部偏移 */
-  top: var(--wt-highlight-top);
-  /* 右侧偏移 */
-  right: var(--wt-highlight-right);
-  /* 背景 */
-  background: var(--wt-highlight);
-  /* 圆角，塑造水滴/液体轮廓 */
-  border-radius: var(--wt-highlight-radius);
-  /* 动画 */
-  animation: wt-highlight-float var(--wt-motion-normal) ease-in-out infinite;
-  /* 透明度 */
-  opacity: var(--wt-highlight-opacity);
-}
-
-.wt-select::before {
-  /* 宽度 */
-  width: var(--wt-highlight-small-size);
-  /* 高度 */
-  height: var(--wt-highlight-small-size);
-  /* 顶部偏移 */
-  top: var(--wt-highlight-small-top);
-  /* 右侧偏移 */
-  right: var(--wt-highlight-small-right);
-  /* 背景 */
-  background: var(--wt-highlight-small);
-  /* 圆角，塑造水滴/液体轮廓 */
-  border-radius: var(--wt-highlight-small-radius);
-  /* 动画 */
-  animation: wt-highlight-float-small var(--wt-motion-slow) ease-in-out infinite;
-  /* 透明度 */
-  opacity: var(--wt-highlight-small-opacity);
-}
-
 .wt-select__value {
   /* 弹性布局中的伸缩比例 */
   flex: 1;
@@ -308,7 +334,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', handleOutside)
   /* 顶部边框 */
   border-top: 6px solid var(--wt-text-secondary);
   /* 过渡动画 */
-  transition: transform 0.2s ease;
+  transition: transform var(--wt-motion-fast) ease;
 }
 
 .wt-select.is-open .wt-select__caret {
@@ -368,11 +394,18 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', handleOutside)
 }
 
 .wt-select__option:hover,
-.wt-select__option.is-selected {
+.wt-select__option.is-selected,
+.wt-select__option.is-active {
   /* 背景 */
   background: color-mix(in srgb, var(--wt-primary) 14%, transparent);
   /* 文本颜色 */
   color: var(--wt-primary);
+}
+
+/* 隐藏的默认插槽容器：仅用于挂载 WtOption 完成注册 */
+.wt-select__shadow {
+  /* 盒模型显示方式 */
+  display: none;
 }
 
 .wt-select__option.is-disabled {

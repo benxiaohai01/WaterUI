@@ -1,26 +1,27 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import DocsLayout from '@/layouts/DocsLayout.vue'
-import HomePage from '@/pages/HomePage.vue'
-import ComponentPage from '@/pages/ComponentPage.vue'
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
       path: '/',
-      component: HomePage
+      component: () => import('@/pages/HomePage.vue')
     },
     {
       path: '/components',
-      component: DocsLayout,
+      component: () => import('@/layouts/DocsLayout.vue'),
       redirect: '/components/button',
       children: [
         {
           path: ':name',
-          component: ComponentPage,
+          component: () => import('@/pages/ComponentPage.vue'),
           props: true
         }
       ]
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      redirect: '/'
     }
   ],
   scrollBehavior: () => ({ top: 0 })

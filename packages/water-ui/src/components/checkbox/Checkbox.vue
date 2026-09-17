@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { CheckboxProps } from './props'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtCheckbox' })
@@ -19,6 +20,12 @@ const emit = defineEmits<{
   change: [value: boolean]
 }>()
 
+/* 原生输入框引用（用于手动同步 indeterminate 属性） */
+const inputRef = ref<HTMLInputElement>()
+
+/* 组件级高光参数（优先级高于全局配置） */
+const highlightStyle = useHighlightStyle(props)
+
 /* 派生状态（计算属性） */
 const classes = computed(() => [
   'wt-checkbox',
@@ -30,6 +37,15 @@ const classes = computed(() => [
   props.customClass
 ])
 
+/* 交互处理逻辑：点击会被浏览器自动重置 indeterminate，需在属性变化时重新写回 */
+watch(
+  () => props.indeterminate,
+  (value) => {
+    if (inputRef.value) inputRef.value.indeterminate = value
+  },
+  { immediate: true }
+)
+
 /* 交互处理逻辑 */
 const handleChange = (event: Event) => {
   const next = (event.target as HTMLInputElement).checked
@@ -39,8 +55,9 @@ const handleChange = (event: Event) => {
 </script>
 
 <template>
-  <label :class="classes">
+  <label :class="classes" :style="highlightStyle">
     <input
+      ref="inputRef"
       class="wt-checkbox__input"
       type="checkbox"
       :checked="modelValue"
@@ -55,13 +72,15 @@ const handleChange = (event: Event) => {
   </label>
 </template>
 <style scoped lang="scss">
+@use '@water-ui/theme/src/mixins/index.scss' as wt;
+
 .wt-checkbox {
-  /* 次高光尺寸 */
-  --wt-highlight-small-size: 5px;
-  /* 次高光顶部定位 */
-  --wt-highlight-small-top: min(var(--wt-highlight-offset), 3px);
-  /* 次高光右侧定位 */
-  --wt-highlight-small-right: min(var(--wt-highlight-offset), 3px);
+  /* 次高光尺寸（随全局基准等比缩放，5px / 12px） */
+  --wt-highlight-small-size: calc(var(--wt-highlight-size-base) * 0.4167);
+  /* 次高光顶部定位（随全局偏移等比缩放，3px / 8px） */
+  --wt-highlight-small-top: calc(var(--wt-highlight-offset) * 0.375);
+  /* 次高光右侧定位（随全局偏移等比缩放，3px / 8px） */
+  --wt-highlight-small-right: calc(var(--wt-highlight-offset) * 0.375);
   /* 盒模型显示方式 */
   display: inline-flex;
   /* 交叉轴对齐方式 */
@@ -115,10 +134,8 @@ const handleChange = (event: Event) => {
     inset 2px 3px 6px rgba(0, 0, 0, 0.14),
     inset -1px -1px 3px var(--wt-shadow-light),
     2px 3px 8px rgba(0, 0, 0, 0.08);
-  /* 动画 */
-  animation: wt-liquid-flow var(--wt-motion-normal) ease-in-out infinite;
-  /* 动画性能提示 */
-  will-change: border-radius;
+  /* 液体形变动画（含 will-change: border-radius） */
+  @include wt.wt-liquid-animation(wt-liquid-flow, var(--wt-motion-normal), border-radius);
 }
 
 .wt-checkbox__box::after {
@@ -131,9 +148,9 @@ const handleChange = (event: Event) => {
   /* 高度 */
   height: var(--wt-highlight-small-size);
   /* 顶部偏移 */
-  top: var(--wt-highlight-small-top);
+  top: min(calc(var(--wt-highlight-inset) + var(--wt-highlight-size) + var(--wt-highlight-group-gap)), calc(100% - var(--wt-highlight-small-size) - 4px));
   /* 右侧偏移 */
-  right: var(--wt-highlight-small-right);
+  right: min(calc(var(--wt-highlight-inset) + var(--wt-highlight-size) + var(--wt-highlight-group-gap)), calc(100% - var(--wt-highlight-small-size) - 4px));
   /* 背景 */
   background: var(--wt-highlight);
   /* 圆角，塑造水滴/液体轮廓 */
@@ -158,7 +175,7 @@ const handleChange = (event: Event) => {
   /* 形变 */
   transform: rotate(-45deg) scale(0);
   /* 过渡动画 */
-  transition: transform 0.18s ease;
+  transition: transform var(--wt-motion-fast) ease;
 }
 
 .wt-checkbox.is-checked .wt-checkbox__box {
@@ -191,7 +208,7 @@ const handleChange = (event: Event) => {
   opacity: 0.55;
 }
 
-.wt-checkbox:focus-visible .wt-checkbox__box {
+.wt-checkbox__input:focus-visible + .wt-checkbox__box {
   /* 焦点轮廓 */
   outline: 2px solid var(--wt-primary);
   /* 焦点轮廓偏移 */

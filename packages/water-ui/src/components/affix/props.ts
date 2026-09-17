@@ -1,4 +1,6 @@
-export interface AffixProps {
+import type { HighlightProps } from '../../utils/highlight'
+
+export interface AffixProps extends HighlightProps {
   /** 距离视口顶部的偏移量（px） */
   offset?: number
   /** 滚动容器（默认 window） */

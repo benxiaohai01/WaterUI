@@ -1,5 +1,4 @@
-:root[data-theme='dark'],
-[data-wt-theme='dark'] {
+@mixin wt-dark-tokens {
   /* 颜色方案（跟随明暗主题） */
   color-scheme: dark;
 
@@ -44,4 +43,16 @@
   --wt-text-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
   /* 涟漪颜色 */
   --wt-ripple-color: rgba(255, 255, 255, 0.24);
+}
+
+:root[data-theme='dark'],
+[data-wt-theme='dark'] {
+  @include wt-dark-tokens;
+}
+
+/* 未显式指定浅色主题时，跟随系统暗色偏好 */
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme='light'], [data-wt-theme='light'])) {
+    @include wt-dark-tokens;
+  }
 }

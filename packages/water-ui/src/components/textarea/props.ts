@@ -1,6 +1,8 @@
+import type { HighlightProps } from '../../utils/highlight'
+
 export type TextareaSize = 'small' | 'medium' | 'large'
 
-export interface TextareaProps {
+export interface TextareaProps extends HighlightProps {
   modelValue?: string | number
   placeholder?: string
   rows?: number

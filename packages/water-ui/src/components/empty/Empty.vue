@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { EmptyProps } from './props'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtEmpty' })
@@ -12,12 +13,15 @@ const props = withDefaults(defineProps<EmptyProps>(), {
   customClass: ''
 })
 
+/* 组件级高光参数（优先级高于全局配置） */
+const highlightStyle = useHighlightStyle(props)
+
 /* 派生状态：容器类名 */
 const classes = computed(() => ['wt-empty', props.customClass])
 </script>
 
 <template>
-  <div :class="classes">
+  <div :class="classes" :style="highlightStyle">
     <div class="wt-empty__image" :style="{ width: `${imageSize}px`, height: `${imageSize}px` }">
       <svg viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path
@@ -52,6 +56,8 @@ const classes = computed(() => ['wt-empty', props.customClass])
 </template>
 
 <style scoped lang="scss">
+@use '@water-ui/theme/src/mixins/index.scss' as wt;
+
 .wt-empty {
   /* 盒模型显示方式 */
   display: flex;
@@ -77,10 +83,8 @@ const classes = computed(() => ['wt-empty', props.customClass])
     inset 3px 4px 10px rgba(0, 0, 0, 0.05),
     inset -2px -2px 6px var(--wt-shadow-light),
     0 8px 20px rgba(0, 0, 0, 0.04);
-  /* 动画 */
-  animation: wt-liquid-flow-subtle var(--wt-motion-slow) ease-in-out infinite;
-  /* 动画性能提示 */
-  will-change: border-radius;
+  /* 液体形变动画（含 will-change: border-radius） */
+  @include wt.wt-liquid-animation(wt-liquid-flow-subtle, var(--wt-motion-slow), border-radius);
 }
 
 .wt-empty__image svg {
@@ -88,8 +92,10 @@ const classes = computed(() => ['wt-empty', props.customClass])
   width: 100%;
   /* 高度 */
   height: 100%;
-  /* 内边距 */
-  padding: 12px;
+  /* 盒模型：内外边距计入尺寸，保证小尺寸与 viewBox 等比缩放 */
+  box-sizing: border-box;
+  /* 内边距，随外框尺寸等比缩放 */
+  padding: 12%;
 }
 
 .wt-empty__description {

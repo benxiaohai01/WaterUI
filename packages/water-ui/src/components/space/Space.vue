@@ -24,7 +24,12 @@ const classes = computed(() => [
   props.customClass
 ])
 
-const gap = computed(() => typeof props.size === 'number' ? `${props.size}px` : props.size)
+/* 派生状态：间距（纯数字字符串自动补 px，避免生成非法 CSS） */
+const gap = computed(() => {
+  if (typeof props.size === 'number') return `${props.size}px`
+  const text = String(props.size).trim()
+  return /^\d+(\.\d+)?$/.test(text) ? `${text}px` : text
+})
 </script>
 
 <template>

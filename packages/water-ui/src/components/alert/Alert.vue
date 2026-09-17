@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { AlertProps } from './props'
 import { WtIcon } from '../icon'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtAlert' })
@@ -11,13 +12,32 @@ const props = withDefaults(defineProps<AlertProps>(), {
   type: 'default',
   closable: false,
   showIcon: false,
+  /* 显式声明 undefined：Vue 会把「无默认值的布尔 prop」的缺省值转成 false，
+     那样受控可见性判定会把缺省当成显式 false，导致未传 visible 时组件不渲染 */
+  visible: undefined,
   customClass: ''
 })
 
 /* 声明组件事件 */
 const emit = defineEmits<{
+  'update:visible': [value: boolean]
   close: []
 }>()
+
+/* 响应式状态：内部可见性（visible 未受控时兜底） */
+const innerVisible = ref(true)
+
+/* 组件级高光参数（优先级高于全局配置） */
+const highlightStyle = useHighlightStyle(props)
+
+/* 派生状态：当前可见性（受控优先，兼作读写入口） */
+const visible = computed({
+  get: () => props.visible ?? innerVisible.value,
+  set: (value: boolean) => {
+    innerVisible.value = value
+    emit('update:visible', value)
+  }
+})
 
 /* 派生状态：Alert 状态类名 */
 const classes = computed(() => [
@@ -40,12 +60,15 @@ const iconName = computed(() => {
   }
 })
 
-/* 交互处理逻辑：关闭提示 */
-const handleClose = () => emit('close')
+/* 交互处理逻辑：关闭提示（先隐藏自身，再通知外部） */
+const handleClose = () => {
+  visible.value = false
+  emit('close')
+}
 </script>
 
 <template>
-  <div :class="classes" role="alert">
+  <div v-if="visible" :class="classes" :style="[highlightStyle, customStyle]" role="alert">
     <span v-if="showIcon" class="wt-alert__icon" aria-hidden="true">
       <wt-icon :name="iconName" :size="18" />
     </span>
@@ -61,11 +84,27 @@ const handleClose = () => emit('close')
 </template>
 
 <style scoped lang="scss">
+@use '@water-ui/theme/src/mixins/index.scss' as wt;
+
 .wt-alert {
   /* 定位方式 */
   position: relative;
   /* 创建独立层叠上下文，隔离内部元素 */
   isolation: isolate;
+  /* 高光尺寸（随全局基准等比缩放，默认 12px 与全局一致） */
+  --wt-highlight-size: calc(var(--wt-highlight-size-base) * 1);
+  /* 次高光尺寸（默认 6px 与全局一致） */
+  --wt-highlight-small-size: calc(var(--wt-highlight-size-base) * 0.5);
+  /* 高光内边距（随全局偏移等比缩放，默认 8px 与全局一致） */
+  --wt-highlight-inset: calc(var(--wt-highlight-offset) * 1);
+  /* 主高光顶部定位（等比缩放后在组件内夹取，避免超出边界） */
+  --wt-highlight-top: min(calc(var(--wt-highlight-offset) * 1), calc(100% - var(--wt-highlight-size) - 4px));
+  /* 主高光右侧定位 */
+  --wt-highlight-right: min(calc(var(--wt-highlight-offset) * 1), calc(100% - var(--wt-highlight-size) - 4px));
+  /* 次高光顶部定位（主高光位置 + 尺寸 + 间距） */
+  --wt-highlight-small-top: min(calc(var(--wt-highlight-offset) * 1 + var(--wt-highlight-size) + var(--wt-highlight-group-gap)), calc(100% - var(--wt-highlight-small-size) - 4px));
+  /* 次高光右侧定位 */
+  --wt-highlight-small-right: min(calc(var(--wt-highlight-offset) * 1 + var(--wt-highlight-size) + var(--wt-highlight-group-gap)), calc(100% - var(--wt-highlight-small-size) - 4px));
   /* 盒模型显示方式 */
   display: flex;
   /* 交叉轴对齐方式 */
@@ -83,10 +122,8 @@ const handleClose = () => emit('close')
     inset 3px 4px 10px rgba(0, 0, 0, 0.08),
     inset -2px -2px 6px var(--wt-shadow-light),
     0 10px 24px rgba(0, 0, 0, 0.06);
-  /* 动画 */
-  animation: wt-liquid-flow-subtle var(--wt-motion-slow) ease-in-out infinite;
-  /* 动画性能提示 */
-  will-change: border-radius, transform;
+  /* 液体形变动画（含 will-change: border-radius, transform） */
+  @include wt.wt-liquid-animation(wt-liquid-flow-subtle, var(--wt-motion-slow), (border-radius, transform));
   /* 文本颜色 */
   color: var(--wt-text);
 }
@@ -101,9 +138,9 @@ const handleClose = () => emit('close')
   /* 高度 */
   height: var(--wt-highlight-size);
   /* 顶部偏移 */
-  top: var(--wt-highlight-top);
+  top: min(var(--wt-highlight-inset), calc(100% - var(--wt-highlight-size) - 4px));
   /* 右侧偏移 */
-  right: var(--wt-highlight-right);
+  right: min(var(--wt-highlight-inset), calc(100% - var(--wt-highlight-size) - 4px));
   /* 背景 */
   background: var(--wt-highlight);
   /* 圆角，塑造水滴/液体轮廓 */
@@ -126,9 +163,9 @@ const handleClose = () => emit('close')
   /* 高度 */
   height: var(--wt-highlight-small-size);
   /* 顶部偏移 */
-  top: var(--wt-highlight-small-top);
+  top: min(calc(var(--wt-highlight-inset) + var(--wt-highlight-size) + var(--wt-highlight-group-gap)), calc(100% - var(--wt-highlight-small-size) - 4px));
   /* 右侧偏移 */
-  right: var(--wt-highlight-small-right);
+  right: min(calc(var(--wt-highlight-inset) + var(--wt-highlight-size) + var(--wt-highlight-group-gap)), calc(100% - var(--wt-highlight-small-size) - 4px));
   /* 背景 */
   background: var(--wt-highlight-small);
   /* 圆角，塑造水滴/液体轮廓 */
@@ -187,7 +224,7 @@ const handleClose = () => emit('close')
   /* 文本颜色 */
   color: var(--wt-text-placeholder);
   /* 过渡动画 */
-  transition: color 0.2s ease, transform 0.2s ease;
+  transition: color var(--wt-motion-fast) ease, transform var(--wt-motion-fast) ease;
 }
 
 .wt-alert__close:hover {

@@ -1,7 +1,9 @@
+import type { HighlightProps } from '../../utils/highlight'
+
 export type StepStatus = 'wait' | 'process' | 'finish' | 'error'
 export type StepsDirection = 'horizontal' | 'vertical'
 
-export interface StepProps {
+export interface StepProps extends HighlightProps {
   /** 步骤标题 */
   title?: string
   /** 步骤描述 */

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { TransferItem, TransferProps } from './props'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtTransfer' })
@@ -20,25 +21,44 @@ const emit = defineEmits<{
   change: [value: Array<string | number>]
 }>()
 
-/* 派生状态（计算属性） */
-const leftItems = computed(() => props.data.filter((item) => !props.modelValue.includes(item.key) && !item.disabled))
+/* 组件级高光参数（优先级高于全局配置） */
+const highlightStyle = useHighlightStyle(props)
+
+/* 派生状态（计算属性）：按 key 去重（统一字符串比较，避免重复 key 造成告警与条目丢失） */
+const uniqueData = computed(() => {
+  const seen = new Set<string>()
+  return props.data.filter((item) => {
+    const key = String(item.key)
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+})
+
+/* 派生状态（计算属性）：已选 key 集合（统一字符串比较，兼容 key 类型不一致） */
+const selectedKeys = computed(() => new Set(props.modelValue.map((key) => String(key))))
+
+/* 派生状态（计算属性）：禁用项保留渲染并置灰，仅不可移动 */
+const leftItems = computed(() => uniqueData.value.filter((item) => !selectedKeys.value.has(String(item.key))))
 
 /* 派生状态（计算属性） */
-const rightItems = computed(() => props.data.filter((item) => props.modelValue.includes(item.key)))
+const rightItems = computed(() => uniqueData.value.filter((item) => selectedKeys.value.has(String(item.key))))
 
 /* 交互处理逻辑 */
 const move = (item: TransferItem, toRight: boolean) => {
   if (props.disabled || item.disabled) return
+  /* 以 data 中实际存在的已选 key 为基准，顺带清理残留 key */
+  const current = rightItems.value.map((entry) => entry.key)
   const next = toRight
-    ? [...props.modelValue, item.key]
-    : props.modelValue.filter((key) => key !== item.key)
+    ? [...current, item.key]
+    : current.filter((key) => String(key) !== String(item.key))
   emit('update:modelValue', next)
   emit('change', next)
 }
 </script>
 
 <template>
-  <div class="wt-transfer" :class="[customClass, { 'is-disabled': disabled }]">
+  <div class="wt-transfer" :class="[customClass, { 'is-disabled': disabled }]" :style="highlightStyle">
     <section class="wt-transfer__panel">
       <h3 class="wt-transfer__title">{{ titles[0] }}</h3>
       <ul class="wt-transfer__list">
@@ -47,6 +67,7 @@ const move = (item: TransferItem, toRight: boolean) => {
           v-for="item in leftItems"
           :key="String(item.key)"
           class="wt-transfer__item"
+          :class="{ 'is-disabled': item.disabled }"
           @click="move(item, true)"
         >
           {{ item.label }}
@@ -62,6 +83,7 @@ const move = (item: TransferItem, toRight: boolean) => {
           v-for="item in rightItems"
           :key="String(item.key)"
           class="wt-transfer__item is-checked"
+          :class="{ 'is-disabled': item.disabled }"
           @click="move(item, false)"
         >
           {{ item.label }}
@@ -71,7 +93,13 @@ const move = (item: TransferItem, toRight: boolean) => {
   </div>
 </template>
 <style scoped lang="scss">
+@use '@water-ui/theme/src/mixins/index.scss' as wt;
+
 .wt-transfer {
+  /* 高光尺寸（随全局基准等比缩放，声明在根元素以便内联参数生效） */
+  --wt-highlight-size: calc(var(--wt-highlight-size-base) * 0.8333);
+  /* 次高光尺寸（随全局基准等比缩放） */
+  --wt-highlight-small-size: calc(var(--wt-highlight-size-base) * 0.5 * 0.8333);
   /* 盒模型显示方式 */
   display: grid;
   /* 栅格列轨道 */
@@ -85,22 +113,16 @@ const move = (item: TransferItem, toRight: boolean) => {
 }
 
 .wt-transfer__panel {
-  /* 定位方式 */
-  position: relative;
-  /* 创建独立层叠上下文，隔离内部元素 */
-  isolation: isolate;
-  /* 高光尺寸 */
-  --wt-highlight-size: min(var(--wt-highlight-size-base), 10px);
-  /* 次高光尺寸 */
-  --wt-highlight-small-size: min(calc(var(--wt-highlight-size-base) * 0.5), 5px);
+  /* 水滴高光：定位方式 + 独立层叠上下文 + 主/次高光伪元素（层叠层级 2） */
+  @include wt.wt-liquid-highlights(2);
   /* 高光顶部定位 */
   --wt-highlight-top: min(var(--wt-highlight-inset), calc(100% - var(--wt-highlight-size) - 4px));
   /* 高光右侧定位 */
   --wt-highlight-right: min(var(--wt-highlight-inset), calc(100% - var(--wt-highlight-size) - 4px));
   /* 次高光顶部定位 */
-  --wt-highlight-small-top: min(calc(var(--wt-highlight-top) + var(--wt-highlight-size) + var(--wt-highlight-group-gap)), calc(100% - var(--wt-highlight-small-size) - 4px));
+  --wt-highlight-small-top: min(calc(min(var(--wt-highlight-inset), calc(100% - var(--wt-highlight-size) - 4px)) + var(--wt-highlight-size) + var(--wt-highlight-group-gap)), calc(100% - var(--wt-highlight-small-size) - 4px));
   /* 次高光右侧定位 */
-  --wt-highlight-small-right: min(calc(var(--wt-highlight-right) + var(--wt-highlight-size) + var(--wt-highlight-group-gap)), calc(100% - var(--wt-highlight-small-size) - 4px));
+  --wt-highlight-small-right: min(calc(min(var(--wt-highlight-inset), calc(100% - var(--wt-highlight-size) - 4px)) + var(--wt-highlight-size) + var(--wt-highlight-group-gap)), calc(100% - var(--wt-highlight-small-size) - 4px));
   /* 溢出裁剪方式 */
   overflow: hidden;
   /* 圆角，塑造水滴/液体轮廓 */
@@ -112,62 +134,10 @@ const move = (item: TransferItem, toRight: boolean) => {
     inset 3px 4px 10px rgba(0, 0, 0, 0.08),
     inset -2px -2px 6px var(--wt-shadow-light),
     3px 6px 16px rgba(0, 0, 0, 0.06);
-  /* 动画 */
-  animation: wt-liquid-flow-subtle var(--wt-motion-slow) ease-in-out infinite;
-  /* 动画性能提示 */
-  will-change: border-radius;
+  /* 液体形变动画（含 will-change: border-radius） */
+  @include wt.wt-liquid-animation(wt-liquid-flow-subtle, var(--wt-motion-slow));
   /* 溢出裁剪方式 */
   overflow: hidden;
-}
-
-.wt-transfer__panel::after,
-.wt-transfer__panel::before {
-  /* 伪元素内容 */
-  content: '';
-  /* 定位方式 */
-  position: absolute;
-  /* 是否响应鼠标事件 */
-  pointer-events: none;
-  /* 层叠层级 */
-  z-index: 2;
-}
-
-.wt-transfer__panel::after {
-  /* 宽度 */
-  width: var(--wt-highlight-size);
-  /* 高度 */
-  height: var(--wt-highlight-size);
-  /* 顶部偏移 */
-  top: var(--wt-highlight-top);
-  /* 右侧偏移 */
-  right: var(--wt-highlight-right);
-  /* 背景 */
-  background: var(--wt-highlight);
-  /* 圆角，塑造水滴/液体轮廓 */
-  border-radius: var(--wt-highlight-radius);
-  /* 动画 */
-  animation: wt-highlight-float var(--wt-motion-normal) ease-in-out infinite;
-  /* 透明度 */
-  opacity: var(--wt-highlight-opacity);
-}
-
-.wt-transfer__panel::before {
-  /* 宽度 */
-  width: var(--wt-highlight-small-size);
-  /* 高度 */
-  height: var(--wt-highlight-small-size);
-  /* 顶部偏移 */
-  top: var(--wt-highlight-small-top);
-  /* 右侧偏移 */
-  right: var(--wt-highlight-small-right);
-  /* 背景 */
-  background: var(--wt-highlight-small);
-  /* 圆角，塑造水滴/液体轮廓 */
-  border-radius: var(--wt-highlight-small-radius);
-  /* 动画 */
-  animation: wt-highlight-float-small var(--wt-motion-slow) ease-in-out infinite;
-  /* 透明度 */
-  opacity: var(--wt-highlight-small-opacity);
 }
 
 .wt-transfer__title {
@@ -218,6 +188,13 @@ const move = (item: TransferItem, toRight: boolean) => {
 .wt-transfer__item.is-checked {
   /* 文本颜色 */
   color: var(--wt-primary);
+}
+
+.wt-transfer__item.is-disabled {
+  /* 鼠标指针样式 */
+  cursor: not-allowed;
+  /* 透明度 */
+  opacity: 0.5;
 }
 
 .wt-transfer__empty {

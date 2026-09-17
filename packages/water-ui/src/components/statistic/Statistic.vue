@@ -16,9 +16,23 @@ const props = withDefaults(defineProps<StatisticProps>(), {
   customClass: ''
 })
 
-/* 派生状态：格式化后的数值 */
+/* 安全定点格式化：≥1e21 时 toFixed 会输出指数表示，改用无分组定点字符串 */
+const toFixedSafe = (value: number, precision: number) => {
+  if (Math.abs(value) >= 1e21) {
+    const plain = value.toLocaleString('en-US', { useGrouping: false, maximumFractionDigits: 0 })
+    return precision > 0 ? `${plain}.${'0'.repeat(precision)}` : plain
+  }
+  return value.toFixed(precision)
+}
+
+/* 派生状态：格式化后的数值（null / NaN 等无效数值兜底为 --） */
 const formattedValue = computed(() => {
-  const fixed = props.value.toFixed(props.precision)
+  const raw = Number(props.value)
+  if (!Number.isFinite(raw)) return '--'
+  /* 精度钳制在 0-100 的整数范围，避免 toFixed 抛出 RangeError */
+  const rawPrecision = Math.trunc(Number(props.precision))
+  const precision = Number.isFinite(rawPrecision) ? Math.min(100, Math.max(0, rawPrecision)) : 0
+  const fixed = toFixedSafe(raw, precision)
   if (!props.groupSeparator) return fixed
   const [int, dec] = fixed.split('.')
   const grouped = int.replace(/\B(?=(\d{3})+(?!\d))/g, ',')

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, inject } from 'vue'
+import { computed, inject, onBeforeUnmount, onMounted } from 'vue'
 import type { BreadcrumbItemProps } from './props'
 import { breadcrumbKey } from './context'
 
@@ -14,8 +14,22 @@ const props = withDefaults(defineProps<BreadcrumbItemProps>(), {
   customClass: ''
 })
 
-/* 获取父级 Breadcrumb 提供的分隔符 */
+/* 获取父级 Breadcrumb 提供的分隔符与顺序上下文 */
 const breadcrumb = inject(breadcrumbKey, null)
+
+/* 当前子项标识，用于父级统计顺序 */
+const self: object = {}
+
+/* 派生状态：是否为最后一项（仅最后一项标记 aria-current） */
+const isLast = computed(() => {
+  const list = breadcrumb?.items.value ?? []
+  if (!list.length) return !breadcrumb
+  return list[list.length - 1] === self
+})
+
+/* 注册 / 注销子项，保证父级顺序信息最新 */
+onMounted(() => breadcrumb?.registerItem(self))
+onBeforeUnmount(() => breadcrumb?.unregisterItem(self))
 
 /* 派生状态：内容类名 */
 const classes = computed(() => [
@@ -31,12 +45,12 @@ const classes = computed(() => [
       v-if="to"
       :href="to"
       :target="target"
-      :aria-current="replace ? undefined : 'page'"
+      :aria-current="isLast ? 'page' : undefined"
       class="wt-breadcrumb__inner"
     >
       <slot />
     </a>
-    <span v-else class="wt-breadcrumb__inner" aria-current="page">
+    <span v-else class="wt-breadcrumb__inner" :aria-current="isLast ? 'page' : undefined">
       <slot />
     </span>
     <span v-if="breadcrumb?.separator" class="wt-breadcrumb__separator" aria-hidden="true">
@@ -65,7 +79,7 @@ const classes = computed(() => [
   /* 行高 */
   line-height: 1.6;
   /* 过渡动画 */
-  transition: color 0.2s ease;
+  transition: color var(--wt-motion-fast) ease;
 }
 
 a.wt-breadcrumb__inner {

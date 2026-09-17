@@ -1,4 +1,6 @@
-export interface BackTopProps {
+import type { HighlightProps } from '../../utils/highlight'
+
+export interface BackTopProps extends HighlightProps {
   /** 滚动高度达到该值后显示按钮（px） */
   visibilityHeight?: number
   /** 目标滚动容器 */

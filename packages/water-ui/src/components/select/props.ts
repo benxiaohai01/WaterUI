@@ -1,3 +1,5 @@
+import type { HighlightProps } from '../../utils/highlight'
+
 export type SelectSize = 'small' | 'medium' | 'large'
 
 export interface SelectOption {
@@ -6,7 +8,7 @@ export interface SelectOption {
   disabled?: boolean
 }
 
-export interface SelectProps {
+export interface SelectProps extends HighlightProps {
   modelValue?: string | number | boolean
   options?: SelectOption[]
   placeholder?: string

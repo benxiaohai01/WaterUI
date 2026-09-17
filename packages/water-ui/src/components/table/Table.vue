@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import type { TableProps } from './props'
 import { resolveSize } from '../config-provider/context'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtTable' })
@@ -21,6 +22,9 @@ const emit = defineEmits<{
 /* 解析组件尺寸配置 */
 const size = resolveSize(() => props.size)
 
+/* 组件级高光参数（优先级高于全局配置） */
+const highlightStyle = useHighlightStyle(props)
+
 /* 派生状态（计算属性） */
 const classes = computed(() => [
   'wt-table',
@@ -31,59 +35,91 @@ const classes = computed(() => [
   }
 ])
 
-/* 交互处理逻辑 */
-const cellValue = (row: Record<string, unknown>, key: string) => row[key] ?? '-'
+/* 交互处理逻辑：行唯一键（未配置 rowKey 时回退行索引） */
+const resolveRowKey = (row: Record<string, unknown>, index: number): string | number => {
+  const key = props.rowKey
+  if (typeof key === 'function') return key(row)
+  if (typeof key === 'string') {
+    const value = row[key]
+    if (value !== null && value !== undefined) return value as string | number
+  }
+  return index
+}
+
+/* 交互处理逻辑：单元格原始值（插槽使用，保留 null/undefined） */
+const rawValue = (row: Record<string, unknown>, key: string) => row[key]
+
+/* 交互处理逻辑：默认渲染文本（空值替换为占位符） */
+const displayValue = (row: Record<string, unknown>, key: string) => row[key] ?? '-'
 </script>
 
 <template>
-  <div class="wt-table-wrap">
+  <div class="wt-table-container" :style="highlightStyle">
     <span class="wt-table-shape" aria-hidden="true" />
-    <table :class="classes">
-      <thead>
-        <tr>
-          <th
-            v-for="column in columns"
-            :key="column.key"
-            :style="{
-              width: column.width,
-              textAlign: column.align || 'left'
-            }"
+    <div class="wt-table-wrap">
+      <table :class="classes">
+        <thead>
+          <tr>
+            <th
+              v-for="column in columns"
+              :key="column.key"
+              scope="col"
+              :style="{
+                width: column.width,
+                textAlign: column.align || 'left'
+              }"
+            >
+              {{ column.title }}
+            </th>
+          </tr>
+        </thead>
+        <tbody v-if="data.length">
+          <tr
+            v-for="(row, rowIndex) in data"
+            :key="resolveRowKey(row, rowIndex)"
+            @click="(event: MouseEvent) => emit('rowClick', row, event)"
           >
-            {{ column.title }}
-          </th>
-        </tr>
-      </thead>
-      <tbody v-if="data.length">
-        <tr
-          v-for="(row, rowIndex) in data"
-          :key="rowIndex"
-          @click="(event: MouseEvent) => emit('rowClick', row, event)"
-        >
-          <td
-            v-for="column in columns"
-            :key="column.key"
-            :style="{ textAlign: column.align || 'left' }"
-          >
-            <slot :name="column.key" :row="row" :value="cellValue(row, column.key)">
-              {{ cellValue(row, column.key) }}
-            </slot>
-          </td>
-        </tr>
-      </tbody>
-      <tbody v-else>
-        <tr>
-          <td :colspan="columns.length" class="wt-table__empty">{{ emptyText }}</td>
-        </tr>
-      </tbody>
-    </table>
+            <td
+              v-for="column in columns"
+              :key="column.key"
+              :style="{ textAlign: column.align || 'left' }"
+            >
+              <slot :name="column.key" :row="row" :value="rawValue(row, column.key)">
+                {{ displayValue(row, column.key) }}
+              </slot>
+            </td>
+          </tr>
+        </tbody>
+        <tbody v-else>
+          <tr>
+            <td :colspan="columns.length" class="wt-table__empty">{{ emptyText }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </template>
 <style scoped lang="scss">
-.wt-table-wrap {
-  /* 定位方式 */
+@use '@water-ui/theme/src/mixins/index.scss' as wt;
+
+.wt-table-container {
+  /* 定位方式：高光与背景板相对滚动外层定位，横向滚动时不跟随移动 */
   position: relative;
   /* 创建独立层叠上下文，隔离内部元素 */
   isolation: isolate;
+  /* 溢出裁剪 */
+  overflow: hidden;
+  /* 宽度 */
+  width: 100%;
+  /* 圆角，塑造水滴/液体轮廓 */
+  border-radius: var(--wt-radius-md);
+}
+
+.wt-table-wrap {
+  /* 定位方式 */
+  position: relative;
+  /* 层叠层级 */
+  z-index: 1;
   /* 水平方向溢出裁剪 */
   overflow-x: auto;
   /* 垂直方向溢出裁剪 */
@@ -108,13 +144,11 @@ const cellValue = (row: Record<string, unknown>, key: string) => row[key] ?? '-'
     inset 3px 4px 10px rgba(0, 0, 0, 0.08),
     inset -2px -2px 6px var(--wt-shadow-light),
     0 10px 26px rgba(0, 0, 0, 0.06);
-  /* 动画 */
-  animation: wt-table-edge-flow var(--wt-motion-slow) ease-in-out infinite;
-  /* 动画性能提示 */
-  will-change: border-radius;
+  /* 液体形变动画（自定义动画名 wt-table-edge-flow，含 will-change: border-radius） */
+  @include wt.wt-liquid-animation(wt-table-edge-flow, var(--wt-motion-slow), border-radius);
 }
 
-.wt-table-wrap::after {
+.wt-table-container::after {
   /* 伪元素内容 */
   content: '';
   /* 定位方式 */
@@ -124,9 +158,9 @@ const cellValue = (row: Record<string, unknown>, key: string) => row[key] ?? '-'
   /* 高度 */
   height: var(--wt-highlight-size);
   /* 顶部偏移 */
-  top: var(--wt-highlight-top);
+  top: min(var(--wt-highlight-inset), calc(100% - var(--wt-highlight-size) - 4px));
   /* 右侧偏移 */
-  right: var(--wt-highlight-right);
+  right: min(var(--wt-highlight-inset), calc(100% - var(--wt-highlight-size) - 4px));
   /* 背景 */
   background: var(--wt-highlight);
   /* 圆角，塑造水滴/液体轮廓 */
@@ -143,7 +177,7 @@ const cellValue = (row: Record<string, unknown>, key: string) => row[key] ?? '-'
   z-index: 2;
 }
 
-.wt-table-wrap::before {
+.wt-table-container::before {
   /* 伪元素内容 */
   content: '';
   /* 定位方式 */
@@ -153,9 +187,9 @@ const cellValue = (row: Record<string, unknown>, key: string) => row[key] ?? '-'
   /* 高度 */
   height: var(--wt-highlight-small-size);
   /* 顶部偏移 */
-  top: var(--wt-highlight-small-top);
+  top: min(calc(var(--wt-highlight-inset) + var(--wt-highlight-size) + var(--wt-highlight-group-gap)), calc(100% - var(--wt-highlight-small-size) - 4px));
   /* 右侧偏移 */
-  right: var(--wt-highlight-small-right);
+  right: min(calc(var(--wt-highlight-inset) + var(--wt-highlight-size) + var(--wt-highlight-group-gap)), calc(100% - var(--wt-highlight-small-size) - 4px));
   /* 背景 */
   background: var(--wt-highlight-small);
   /* 圆角，塑造水滴/液体轮廓 */

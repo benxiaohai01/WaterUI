@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { PageHeaderProps } from './props'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtPageHeader' })
@@ -19,6 +20,9 @@ const emit = defineEmits<{
   back: []
 }>()
 
+/* 组件级高光参数（优先级高于全局配置） */
+const highlightStyle = useHighlightStyle(props)
+
 /* 派生状态：容器类名 */
 const classes = computed(() => ['wt-page-header', props.customClass])
 
@@ -29,7 +33,7 @@ const handleBack = () => {
 </script>
 
 <template>
-  <header :class="classes">
+  <header :class="classes" :style="highlightStyle">
     <div v-if="$slots.breadcrumb" class="wt-page-header__breadcrumb">
       <slot name="breadcrumb" />
     </div>
@@ -48,8 +52,9 @@ const handleBack = () => {
       </button>
 
       <div class="wt-page-header__heading">
-        <h1 v-if="title" class="wt-page-header__title">{{ title }}</h1>
-        <slot name="title">{{ title }}</slot>
+        <slot name="title">
+          <h1 v-if="title" class="wt-page-header__title">{{ title }}</h1>
+        </slot>
         <p v-if="subtitle" class="wt-page-header__subtitle">{{ subtitle }}</p>
       </div>
 
@@ -120,8 +125,8 @@ const handleBack = () => {
   color: var(--wt-text);
   /* 过渡动画 */
   transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
+    transform var(--wt-motion-fast) ease,
+    box-shadow var(--wt-motion-fast) ease;
 }
 
 .wt-page-header__back:hover {

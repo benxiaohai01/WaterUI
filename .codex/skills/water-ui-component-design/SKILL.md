@@ -129,6 +129,24 @@ Interactive surface components should have two pseudo-element highlights:
 
 Highlight size must use the shared `--wt-highlight-size` and `--wt-highlight-small-size` tokens and remain inside the component bounds.
 
+### Per-Component Highlight Parameters
+
+Every component that renders water-drop highlights must expose the shared highlight props, and component-level values win over the global config:
+
+- Props are the same three fields as `HighlightProps` in `packages/water-ui/src/utils/highlight.ts`: `highlightSize`, `highlightOffset`, `highlightOpacity`. Extend the shared interface in `props.ts` (`interface XxxProps extends HighlightProps`); the SFC compiler resolves it correctly — if a component suddenly receives no props, the running dev server cached the type resolution, so touch `props.ts` or restart it.
+- Wire them with `const highlightStyle = useHighlightStyle(props)` and bind it on the component root (or on the actual water surface when the root is a `Teleport`): `:style="[highlightStyle, customStyle]"`.
+- Precedence: component props (inline custom properties) > component styles > global `--wt-highlight-*` config written on `<html>`.
+- Highlight geometry must be computed **where it is used**: write `top/right: min(var(--wt-highlight-inset), calc(100% - var(--wt-highlight-size) - 4px))` (and the small-highlight variant) directly on the highlight pseudo-element. Custom properties substitute at their declaration site, so a token declared in `:root` freezes the values it references and component-level offsets would never move the highlight.
+
+### Global Highlight Config Must Stay Effective
+
+Component styles must derive from the global base instead of clamping it, so the ConfigProvider sliders work over their whole range:
+
+- Size: `calc(var(--wt-highlight-size-base) * <ratio>)` — never `min(var(--wt-highlight-size-base), Npx)` and never a hard-coded px size.
+- Position: `calc(var(--wt-highlight-offset) * <ratio>)` — never `min(var(--wt-highlight-offset), Kpx)`.
+- Ratios keep the current default look: the global defaults are `--wt-highlight-size-base: 12px` and `--wt-highlight-offset: 8px`, so `11px → 12 * 0.9167`, `6px → 8 * 0.75`, `5px → 12 * 0.4167`.
+- Opacity and the shadow depth (`--wt-shadow-dark-alpha`) are already global tokens; consume them instead of literal values.
+
 Table components must also include the same top-right double highlight and an edge-only liquid deformation. The table should preserve horizontal scrolling, animate the four rounded edges without scaling the text area, and keep the two highlights clearly separated so they never overlap.
 
 ### Shadow Layers
@@ -152,7 +170,11 @@ Animation should express subtle water flow. Prefer `transform`, `opacity`, and `
 - Standard components may use `wt-liquid-flow`.
 - Inputs and softer surfaces should use `wt-liquid-flow-subtle` to keep amplitude small.
 - Respect `prefers-reduced-motion`.
+  - The theme layer handles this globally; do not add per-component overrides.
+  - A showcase site may declare `data-wt-motion="full"` on `<html>` to keep the signature water motion even when the OS asks for reduced motion.
 - Do not create large synchronized animation loops without pausing or randomizing phase.
+- Reuse the theme mixins instead of copying the recipe: `wt-liquid-surface`, `wt-liquid-highlights($z-index)`, `wt-liquid-animation($name, $duration, $will-change)` from `packages/theme/src/mixins`. Keyframes live in `packages/theme/src/keyframes.scss` and are loaded once by the theme entry — reference the animation names only.
+- Motion durations must come from tokens: `--wt-motion-fast` (micro-interactions), `--wt-motion-base` (overlay enter/leave), `--wt-motion-normal` / `--wt-motion-slow` (ambient loops). Do not hard-code durations.
 
 ## Ripple Diffusion
 

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { CarouselProps, CarouselEmits } from './props'
-import { provideCarousel } from './context'
+import { provideCarousel, type CarouselItemInstance } from './context'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtCarousel' })
@@ -20,10 +21,15 @@ const props = withDefaults(defineProps<CarouselProps>(), {
 /* 声明组件事件 */
 const emit = defineEmits<CarouselEmits>()
 
+/* 组件级高光参数（优先级高于全局配置） */
+const highlightStyle = useHighlightStyle(props)
+
 /* 响应式状态：当前索引（受控） */
 const current = ref(props.activeIndex)
-/* 响应式状态：轮播项数量 */
-const itemCount = ref(0)
+/* 响应式状态：轮播项注册表（按 DOM 顺序维护） */
+const items = ref<CarouselItemInstance[]>([])
+/* 派生状态：轮播项数量 */
+const itemCount = computed(() => items.value.length)
 /* 响应式状态：自动播放定时器 */
 let timer: ReturnType<typeof setInterval> | null = null
 
@@ -56,6 +62,20 @@ const goTo = (index: number) => {
 const prev = () => goTo(current.value - 1)
 const next = () => goTo(current.value + 1)
 
+/* 交互处理逻辑：按 DOM 顺序重排索引并写回每一项（动态增删项后立即生效） */
+const syncIndexes = () => {
+  items.value.sort((a, b) => {
+    if (!a.el || !b.el || a.el === b.el) return 0
+    const position = a.el.compareDocumentPosition(b.el)
+    if (position & Node.DOCUMENT_POSITION_FOLLOWING) return -1
+    if (position & Node.DOCUMENT_POSITION_PRECEDING) return 1
+    return 0
+  })
+  items.value.forEach((item, index) => item.setIndex(index))
+  /* 项数减少后修正越界的激活项 */
+  if (itemCount.value > 0 && current.value > maxIndex.value) goTo(maxIndex.value)
+}
+
 /* 自动播放控制 */
 const startTimer = () => {
   stopTimer()
@@ -81,27 +101,50 @@ provideCarousel({
   get activeIndex() {
     return current.value
   },
-  register: () => {
-    const index = itemCount.value
-    itemCount.value += 1
-    return index
+  register: (item) => {
+    if (!items.value.includes(item)) items.value.push(item)
+    syncIndexes()
   },
-  unregister: (_index: number) => {
-    itemCount.value -= 1
-    if (current.value >= itemCount.value && itemCount.value > 0) {
-      current.value = itemCount.value - 1
-    }
+  unregister: (item) => {
+    const index = items.value.indexOf(item)
+    if (index !== -1) items.value.splice(index, 1)
+    syncIndexes()
   }
 })
 
-onMounted(startTimer)
-onBeforeUnmount(stopTimer)
+/* 运行时变更自动播放配置：重启定时器 */
+watch(
+  () => [props.autoplay, props.interval],
+  () => {
+    startTimer()
+  }
+)
+
+/* 交互处理逻辑：页面隐藏时暂停自动播放，恢复可见时重启 */
+const handleVisibilityChange = () => {
+  if (document.hidden) {
+    stopTimer()
+  } else {
+    startTimer()
+  }
+}
+
+onMounted(() => {
+  startTimer()
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+})
+
+onBeforeUnmount(() => {
+  stopTimer()
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
+})
 </script>
 
 <template>
   <div
     class="wt-carousel"
     :class="props.customClass"
+    :style="highlightStyle"
     @mouseenter="stopTimer"
     @mouseleave="startTimer"
   >
@@ -143,6 +186,8 @@ onBeforeUnmount(stopTimer)
 </template>
 
 <style scoped lang="scss">
+@use '@water-ui/theme/src/mixins/index.scss' as wt;
+
 .wt-carousel {
   /* 位置 */
   position: relative;
@@ -161,10 +206,8 @@ onBeforeUnmount(stopTimer)
     0 10px 26px rgba(0, 0, 0, 0.05);
   /* 溢出隐藏 */
   overflow: hidden;
-  /* 动画 */
-  animation: wt-liquid-flow-subtle var(--wt-motion-slow) ease-in-out infinite;
-  /* 动画性能提示 */
-  will-change: border-radius;
+  /* 液体形变动画（含 will-change: border-radius） */
+  @include wt.wt-liquid-animation(wt-liquid-flow-subtle, var(--wt-motion-slow), border-radius);
 }
 
 .wt-carousel__track {
@@ -209,7 +252,7 @@ onBeforeUnmount(stopTimer)
     inset -1px -1px 4px var(--wt-shadow-light),
     0 4px 12px rgba(0, 0, 0, 0.08);
   /* 过渡 */
-  transition: color 0.2s ease;
+  transition: color var(--wt-motion-fast) ease;
 }
 
 .wt-carousel__arrow:hover:not(:disabled) {
@@ -264,8 +307,8 @@ onBeforeUnmount(stopTimer)
   cursor: pointer;
   /* 过渡 */
   transition:
-    width 0.25s ease,
-    background 0.25s ease;
+    width var(--wt-motion-fast) ease,
+    background var(--wt-motion-fast) ease;
 }
 
 .wt-carousel__dot.is-active {

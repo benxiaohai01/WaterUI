@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, useAttrs } from 'vue'
+import type { ClassValue, StyleValue } from 'vue'
 import type { TextareaProps } from './props'
 import { resolveSize } from '../config-provider/context'
+import { useHighlightStyle } from '../../utils/highlight'
 
-/* 组件注册名（供全局组件与 DevTools 识别） */
-defineOptions({ name: 'WtTextarea' })
+/* 组件注册名（供全局组件与 DevTools 识别）；关闭默认透传，避免父级 attrs 落到包裹 div */
+defineOptions({ name: 'WtTextarea', inheritAttrs: false })
 
 /* 声明组件入参与默认值 */
 const props = withDefaults(defineProps<TextareaProps>(), {
@@ -28,8 +30,27 @@ const emit = defineEmits<{
   blur: [event: FocusEvent]
 }>()
 
+/* 透传属性拆分：class/style 留在根元素，其余转发给原生文本域（供 FormItem label 关联与 aria 生效） */
+const attrs = useAttrs()
+const rootAttrs = computed(() => ({
+  class: attrs.class as ClassValue | undefined,
+  style: attrs.style as StyleValue | undefined
+}))
+const controlAttrs = computed(() => {
+  const forwarded: Record<string, unknown> = {}
+  Object.entries(attrs).forEach(([key, value]) => {
+    if (key !== 'class' && key !== 'style') {
+      forwarded[key] = value
+    }
+  })
+  return forwarded
+})
+
 /* 解析组件尺寸配置 */
 const size = resolveSize(() => props.size)
+
+/* 组件级高光参数（优先级高于全局配置） */
+const highlightStyle = useHighlightStyle(props)
 
 /* 派生状态（计算属性） */
 const classes = computed(() => [
@@ -56,8 +77,9 @@ const handleChange = (event: Event) => {
 </script>
 
 <template>
-  <div :class="classes">
+  <div :class="classes" :style="[highlightStyle, rootAttrs.style]" v-bind="rootAttrs">
     <textarea
+      v-bind="controlAttrs"
       class="wt-textarea__native"
       :value="modelValue"
       :placeholder="placeholder"
@@ -77,17 +99,17 @@ const handleChange = (event: Event) => {
   </div>
 </template>
 <style scoped lang="scss">
+@use '@water-ui/theme/src/mixins/index.scss' as wt;
+
 .wt-textarea {
-  /* 高光尺寸 */
-  --wt-highlight-size: min(var(--wt-highlight-size-base), 12px);
-  /* 次高光尺寸 */
-  --wt-highlight-small-size: min(calc(var(--wt-highlight-size-base) * 0.5), 7px);
-  /* 高光内边距 */
-  --wt-highlight-inset: min(var(--wt-highlight-offset), 6px);
-  /* 定位方式 */
-  position: relative;
-  /* 创建独立层叠上下文，隔离内部元素 */
-  isolation: isolate;
+  /* 高光尺寸（随全局基准等比缩放，12px 即全局基准） */
+  --wt-highlight-size: var(--wt-highlight-size-base);
+  /* 次高光尺寸（随全局基准等比缩放，7px / 12px） */
+  --wt-highlight-small-size: calc(var(--wt-highlight-size-base) * 0.5 * 1.1667);
+  /* 高光内边距（随全局偏移等比缩放，6px / 8px） */
+  --wt-highlight-inset: calc(var(--wt-highlight-offset) * 0.75);
+  /* 水滴高光：定位方式 + 独立层叠上下文 + 主/次高光伪元素（层叠层级 3） */
+  @include wt.wt-liquid-highlights(3);
   /* 盒模型显示方式 */
   display: inline-flex;
   /* 弹性布局主轴方向 */
@@ -113,61 +135,7 @@ const handleChange = (event: Event) => {
   /* 动画 */
   animation: wt-liquid-flow-subtle var(--wt-motion-slow) ease-in-out infinite;
   /* 过渡动画 */
-  transition: box-shadow 0.25s ease, background 0.25s ease;
-}
-
-.wt-textarea::after {
-  /* 伪元素内容 */
-  content: '';
-  /* 定位方式 */
-  position: absolute;
-  /* 宽度 */
-  width: var(--wt-highlight-size);
-  /* 高度 */
-  height: var(--wt-highlight-size);
-  /* 顶部偏移 */
-  top: var(--wt-highlight-top);
-  /* 右侧偏移 */
-  right: var(--wt-highlight-right);
-  /* 背景 */
-  background: var(--wt-highlight);
-  /* 圆角，塑造水滴/液体轮廓 */
-  border-radius: var(--wt-highlight-radius);
-  /* 是否响应鼠标事件 */
-  pointer-events: none;
-  /* 动画 */
-  animation: wt-highlight-float var(--wt-motion-normal) ease-in-out infinite;
-  /* 透明度 */
-  opacity: var(--wt-highlight-opacity);
-  /* 层叠层级 */
-  z-index: 3;
-}
-
-.wt-textarea::before {
-  /* 伪元素内容 */
-  content: '';
-  /* 定位方式 */
-  position: absolute;
-  /* 宽度 */
-  width: var(--wt-highlight-small-size);
-  /* 高度 */
-  height: var(--wt-highlight-small-size);
-  /* 顶部偏移 */
-  top: var(--wt-highlight-small-top);
-  /* 右侧偏移 */
-  right: var(--wt-highlight-small-right);
-  /* 背景 */
-  background: var(--wt-highlight-small);
-  /* 圆角，塑造水滴/液体轮廓 */
-  border-radius: var(--wt-highlight-small-radius);
-  /* 是否响应鼠标事件 */
-  pointer-events: none;
-  /* 动画 */
-  animation: wt-highlight-float-small var(--wt-motion-slow) ease-in-out infinite;
-  /* 透明度 */
-  opacity: var(--wt-highlight-small-opacity);
-  /* 层叠层级 */
-  z-index: 3;
+  transition: box-shadow var(--wt-motion-fast) ease, background var(--wt-motion-fast) ease;
 }
 
 .wt-textarea__native {

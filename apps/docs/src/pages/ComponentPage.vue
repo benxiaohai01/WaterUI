@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { componentMeta } from '@/components/catalog'
 import { componentDemos } from '@/demos'
 import CodeBlock from '@/components/CodeBlock.vue'
@@ -24,11 +24,62 @@ const rippleOpacity = ref(0.45)
 const rippleScale = ref(9)
 const iconWrapped = ref(false)
 
-const previewStyle = computed(() => ({
-  '--wt-ripple-enabled': rippleEnabled.value ? 1 : 0,
-  '--wt-ripple-opacity': rippleOpacity.value,
-  '--wt-ripple-scale': rippleScale.value
-}))
+/* 支持组件级高光参数的组件（与组件库 props 的 HighlightProps 保持一致） */
+const highlightComponents = new Set([
+  'affix', 'alert', 'autocomplete', 'avatar', 'back-top', 'badge', 'button', 'calendar', 'card',
+  'carousel', 'cascader', 'checkbox', 'collapse', 'color-picker', 'date-picker', 'descriptions',
+  'dialog', 'drawer', 'dropdown', 'empty', 'image', 'input', 'input-number', 'loading', 'menu',
+  'message', 'message-box', 'notification', 'page-header', 'pagination', 'popconfirm', 'popover',
+  'progress', 'radio', 'rate', 'result', 'scrollbar', 'select', 'slider', 'splitter', 'steps',
+  'switch', 'table', 'tabs', 'tag', 'textarea', 'time-picker', 'tooltip', 'transfer', 'upload'
+])
+
+const supportsHighlight = computed(() => highlightComponents.has(props.name))
+
+/* 组件级高光滑块：未调节时不写入内联变量，保持组件默认与全局配置 */
+const highlightSize = ref(12)
+const highlightOffset = ref(8)
+const highlightOpacity = ref(0.78)
+const highlightTouched = ref(false)
+
+const resetHighlight = () => {
+  highlightSize.value = 12
+  highlightOffset.value = 8
+  highlightOpacity.value = 0.78
+  highlightTouched.value = false
+}
+
+const previewStyle = computed(() => {
+  const style: Record<string, string | number> = {}
+
+  if (props.name === 'button') {
+    style['--wt-ripple-enabled'] = rippleEnabled.value ? 1 : 0
+    style['--wt-ripple-opacity'] = rippleOpacity.value
+    style['--wt-ripple-scale'] = rippleScale.value
+  }
+
+  if (supportsHighlight.value && highlightTouched.value) {
+    /* 覆盖全局基准：组件的高光尺寸/位置均等比派生自基准，因此在示例范围内即等价于组件级参数 */
+    style['--wt-highlight-size-base'] = `${highlightSize.value}px`
+    style['--wt-highlight-offset'] = `${highlightOffset.value}px`
+    style['--wt-highlight-opacity'] = `${highlightOpacity.value}`
+    style['--wt-highlight-small-opacity'] = `${Math.max(0, highlightOpacity.value - 0.1)}`
+  }
+
+  return style
+})
+
+/* 切换组件时重置预览控制状态，避免参数串页 */
+watch(
+  () => props.name,
+  () => {
+    rippleEnabled.value = false
+    rippleOpacity.value = 0.45
+    rippleScale.value = 9
+    iconWrapped.value = false
+    resetHighlight()
+  }
+)
 
 const demoProps = computed(() => {
   if (props.name === 'icon') {
@@ -84,6 +135,54 @@ const demoProps = computed(() => {
           <div class="token-control token-control--switch">
             <span>水滴包裹</span>
             <wt-switch v-model="iconWrapped" />
+          </div>
+        </div>
+      </section>
+
+      <section v-if="supportsHighlight" class="token-panel component-controls">
+        <div class="token-panel__heading">
+          <div>
+            <wt-text strong>{{ meta.label }} 高光参数</wt-text>
+            <wt-text type="secondary">仅作用于当前示例，覆盖全局配置；组件 props 与全局配置等价。</wt-text>
+          </div>
+          <wt-button size="small" @click="resetHighlight()">恢复默认</wt-button>
+        </div>
+
+        <div class="token-panel__grid">
+          <div class="token-control">
+            <span>高光尺寸</span>
+            <wt-slider
+              v-model="highlightSize"
+              :min="4"
+              :max="24"
+              :step="1"
+              show-value
+              @update:model-value="highlightTouched = true"
+            />
+          </div>
+
+          <div class="token-control">
+            <span>高光偏移</span>
+            <wt-slider
+              v-model="highlightOffset"
+              :min="0"
+              :max="16"
+              :step="1"
+              show-value
+              @update:model-value="highlightTouched = true"
+            />
+          </div>
+
+          <div class="token-control">
+            <span>高光透明度</span>
+            <wt-slider
+              v-model="highlightOpacity"
+              :min="0.2"
+              :max="1"
+              :step="0.05"
+              show-value
+              @update:model-value="highlightTouched = true"
+            />
           </div>
         </div>
       </section>
@@ -156,7 +255,7 @@ const demoProps = computed(() => {
   border-radius: var(--wt-radius-md);
   background: color-mix(in srgb, var(--wt-surface) 72%, transparent);
   box-shadow:
-    inset 2px 3px 8px rgba(0, 0, 0, 0.07),
+    inset 2px 3px 8px var(--wt-shadow-dark),
     inset -2px -2px 5px var(--wt-shadow-light);
 }
 
@@ -234,9 +333,9 @@ const demoProps = computed(() => {
   border-radius: var(--wt-radius-lg);
   background: color-mix(in srgb, var(--wt-bg) 92%, var(--wt-surface));
   box-shadow:
-    inset 3px 4px 10px rgba(0, 0, 0, 0.08),
+    inset 3px 4px 10px var(--wt-shadow-dark),
     inset -2px -2px 6px var(--wt-shadow-light),
-    0 12px 30px rgba(0, 0, 0, 0.06);
+    0 12px 30px color-mix(in srgb, var(--wt-shadow-dark) 60%, transparent);
 }
 
 .params-section {

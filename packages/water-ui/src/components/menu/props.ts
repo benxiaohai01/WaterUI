@@ -1,3 +1,5 @@
+import type { HighlightProps } from '../../utils/highlight'
+
 export type MenuMode = 'vertical' | 'horizontal'
 export type MenuTheme = 'light' | 'dark'
 
@@ -23,7 +25,7 @@ export interface SubMenuProps {
   customClass?: string
 }
 
-export interface MenuProps {
+export interface MenuProps extends HighlightProps {
   /** 当前激活菜单项标识（v-model） */
   modelValue?: string
   /** 默认激活菜单项标识（非受控场景） */

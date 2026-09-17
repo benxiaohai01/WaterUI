@@ -12,6 +12,8 @@ export interface StepsContext {
   register: (step: unknown) => void
   /** 注销步骤 */
   unregister: (step: unknown) => void
+  /** 查询步骤在已注册列表中的位置（用于推导索引） */
+  indexOf: (step: unknown) => number
   /** 触发步骤点击 */
   onSelect: (index: number) => void
 }

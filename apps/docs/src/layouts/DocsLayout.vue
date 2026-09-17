@@ -1,30 +1,53 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { componentCatalog } from '@/components/catalog'
 
-const theme = ref<'light' | 'dark'>('light')
+const route = useRoute()
+
+/* 初始主题由 main.ts 在挂载前写入根元素，这里只负责读取与切换 */
+const theme = ref<'light' | 'dark'>(
+  document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'
+)
 const sidebarOpen = ref(false)
+
+/* 安全写入：隐私模式下 localStorage 会抛出异常，不能中断主题切换 */
+const saveTheme = (next: 'light' | 'dark') => {
+  try {
+    localStorage.setItem('water-ui-theme', next)
+  } catch {
+    /* 忽略存储失败，主题仍然作用于当前页面 */
+  }
+}
 
 const applyTheme = (next: 'light' | 'dark') => {
   theme.value = next
   document.documentElement.dataset.theme = next
-  localStorage.setItem('water-ui-theme', next)
+  saveTheme(next)
 }
 
 const toggleTheme = () => {
   applyTheme(theme.value === 'light' ? 'dark' : 'light')
 }
 
+/* 键盘：Escape 关闭移动端抽屉 */
+const handleKeydown = (event: KeyboardEvent) => {
+  if (event.key === 'Escape') sidebarOpen.value = false
+}
+
 onMounted(() => {
-  const saved = localStorage.getItem('water-ui-theme')
-  const initial = saved === 'dark' || saved === 'light' ? saved : window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-  applyTheme(initial)
+  document.addEventListener('keydown', handleKeydown)
 })
 
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', handleKeydown)
+})
+
+/* 路由变化时关闭移动端抽屉，避免遮罩挡住新页面 */
 watch(
-  () => document.documentElement.dataset.theme,
-  (value) => {
-    theme.value = value === 'dark' ? 'dark' : 'light'
+  () => route.fullPath,
+  () => {
+    sidebarOpen.value = false
   }
 )
 </script>
@@ -39,6 +62,7 @@ watch(
             type="default"
             size="small"
             aria-label="打开目录"
+            :aria-expanded="sidebarOpen"
             @click="sidebarOpen = !sidebarOpen"
           >
             <template #icon>
@@ -55,13 +79,21 @@ watch(
         <wt-space class="docs-header__right" :size="10">
           <router-link class="docs-header__nav" to="/">首页</router-link>
           <router-link class="docs-header__nav" to="/components">组件</router-link>
-          <wt-link href="https://github.com/" target="_blank" :underline="false">
+          <wt-link
+            href="https://github.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="GitHub 仓库"
+            :underline="false"
+          >
             <wt-icon name="github" :size="19" />
           </wt-link>
           <wt-button
+            class="docs-theme-toggle"
             type="default"
             size="small"
             :aria-label="theme === 'light' ? '切换到暗黑模式' : '切换到明亮模式'"
+            :aria-pressed="theme === 'dark'"
             @click="toggleTheme"
           >
             <template #icon>
@@ -159,7 +191,7 @@ watch(
   height: 22px;
   background: linear-gradient(145deg, var(--wt-primary), color-mix(in srgb, var(--wt-primary) 55%, white));
   border-radius: 41% 59% 70% 30% / 39% 49% 51% 61%;
-  box-shadow: inset 2px 3px 6px rgba(255, 255, 255, 0.45), 2px 3px 8px color-mix(in srgb, var(--wt-primary) 30%, transparent);
+  box-shadow: inset 2px 3px 6px color-mix(in srgb, var(--wt-highlight) 45%, transparent), 2px 3px 8px color-mix(in srgb, var(--wt-primary) 30%, transparent);
 }
 
 .docs-header__nav {
@@ -260,12 +292,15 @@ watch(
     z-index: 30;
     height: calc(100vh - 64px);
     transform: translateX(-100%);
-    transition: transform 0.24s ease;
+    /* 关闭态不可见，链接同时移出 Tab 顺序 */
+    visibility: hidden;
+    transition: transform 0.24s ease, visibility 0.24s ease;
     background: var(--wt-surface);
   }
 
   .docs-sidebar.is-open {
     transform: translateX(0);
+    visibility: visible;
   }
 
   .docs-sidebar-mask {
@@ -273,7 +308,7 @@ watch(
     position: fixed;
     inset: 64px 0 0;
     z-index: 25;
-    background: rgba(0, 0, 0, 0.32);
+    background: var(--wt-shadow-deeper);
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.2s ease;

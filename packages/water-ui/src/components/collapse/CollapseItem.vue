@@ -2,6 +2,8 @@
 import { computed } from 'vue'
 import type { CollapseItemProps } from './props'
 import { useCollapse } from './context'
+import { useUid } from '../../utils/uid'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtCollapseItem' })
@@ -16,6 +18,12 @@ const props = withDefaults(defineProps<CollapseItemProps>(), {
 /* 注入父级上下文 */
 const collapse = useCollapse()
 
+/* 组件级高光参数（优先级高于全局配置） */
+const highlightStyle = useHighlightStyle(props)
+
+/* 面板内容区域 id，用于头部按钮的 aria-controls 关联 */
+const bodyId = useUid('wt-collapse-item')
+
 /* 派生状态：是否展开 */
 const isOpen = computed(() => (collapse ? collapse.isActive(props.name) : false))
 
@@ -29,11 +37,14 @@ const handleClick = () => {
 <template>
   <div
     :class="['wt-collapse-item', { 'is-open': isOpen, 'is-disabled': disabled }, props.customClass]"
+    :style="highlightStyle"
   >
     <button
       type="button"
       class="wt-collapse-item__header"
       :disabled="disabled"
+      :aria-expanded="isOpen"
+      :aria-controls="bodyId"
       @click="handleClick"
     >
       <span class="wt-collapse-item__title">
@@ -41,7 +52,7 @@ const handleClick = () => {
       </span>
       <span class="wt-collapse-item__arrow" aria-hidden="true">▾</span>
     </button>
-    <div v-show="isOpen" class="wt-collapse-item__body">
+    <div v-show="isOpen" :id="bodyId" class="wt-collapse-item__body">
       <div class="wt-collapse-item__content">
         <slot />
       </div>
@@ -103,7 +114,7 @@ const handleClick = () => {
 
 .wt-collapse-item__arrow {
   /* 过渡 */
-  transition: transform 0.25s ease;
+  transition: transform var(--wt-motion-fast) ease;
   /* 文本颜色 */
   color: var(--wt-text-secondary);
 }
@@ -117,7 +128,7 @@ const handleClick = () => {
   /* 溢出隐藏 */
   overflow: hidden;
   /* 过渡 */
-  transition: max-height 0.25s ease;
+  transition: max-height var(--wt-motion-fast) ease;
 }
 
 .wt-collapse-item__content {

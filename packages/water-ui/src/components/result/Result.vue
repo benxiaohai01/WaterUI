@@ -1,17 +1,25 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { ResultProps, ResultStatus } from './props'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtResult' })
 
-/* 声明组件入参与默认值 */
-const props = withDefaults(defineProps<ResultProps>(), {
-  status: 'info',
-  title: '',
-  subtitle: '',
-  customClass: ''
-})
+/* 标题语义层级 */
+type ResultHeadingLevel = 1 | 2 | 3 | 4 | 5 | 6
+
+/* 声明组件入参与默认值（在基础属性上追加标题层级） */
+const props = withDefaults(
+  defineProps<ResultProps & { /** 标题标签层级 */ headingLevel?: ResultHeadingLevel }>(),
+  {
+    status: 'info',
+    title: '',
+    subtitle: '',
+    headingLevel: 3,
+    customClass: ''
+  }
+)
 
 /* 状态 → 语义色映射 */
 const statusColor: Record<ResultStatus, string> = {
@@ -25,11 +33,14 @@ const statusColor: Record<ResultStatus, string> = {
 
 /* 派生状态：容器类名 */
 const classes = computed(() => ['wt-result', `wt-result--${props.status}`, props.customClass])
+
+/* 组件级高光参数（优先级高于全局配置） */
+const highlightStyle = useHighlightStyle(props)
 </script>
 
 <template>
-  <div :class="classes">
-    <div class="wt-result__icon" :style="{ color: statusColor[status] }">
+  <div :class="classes" :style="highlightStyle">
+    <div class="wt-result__icon" :style="{ color: statusColor[status] }" aria-hidden="true">
       <svg v-if="status === 'success'" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M16 34L28 46L50 20" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
       </svg>
@@ -50,7 +61,7 @@ const classes = computed(() => ['wt-result', `wt-result--${props.status}`, props
         <path d="M27 30C25 34 25 38 27 42" stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity="0.5" />
       </svg>
     </div>
-    <h3 v-if="title" class="wt-result__title">{{ title }}</h3>
+    <component v-if="title" :is="`h${headingLevel}`" class="wt-result__title">{{ title }}</component>
     <p v-if="subtitle" class="wt-result__subtitle">{{ subtitle }}</p>
     <div v-if="$slots.default" class="wt-result__extra">
       <slot />
@@ -59,6 +70,8 @@ const classes = computed(() => ['wt-result', `wt-result--${props.status}`, props
 </template>
 
 <style scoped lang="scss">
+@use '@water-ui/theme/src/mixins/index.scss' as wt;
+
 .wt-result {
   /* 盒模型显示方式 */
   display: flex;
@@ -94,10 +107,8 @@ const classes = computed(() => ['wt-result', `wt-result--${props.status}`, props
     inset 3px 4px 10px rgba(0, 0, 0, 0.06),
     inset -2px -2px 6px var(--wt-shadow-light),
     0 12px 28px rgba(0, 0, 0, 0.08);
-  /* 动画 */
-  animation: wt-liquid-flow-subtle var(--wt-motion-slow) ease-in-out infinite;
-  /* 动画性能提示 */
-  will-change: border-radius;
+  /* 液体形变动画（含 will-change: border-radius） */
+  @include wt.wt-liquid-animation(wt-liquid-flow-subtle, var(--wt-motion-slow), border-radius);
 }
 
 .wt-result__icon svg {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { CardProps } from './props'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtCard' })
@@ -12,6 +13,9 @@ const props = withDefaults(defineProps<CardProps>(), {
   customClass: ''
 })
 
+/* 组件级高光参数（优先级高于全局配置） */
+const highlightStyle = useHighlightStyle(props)
+
 /* 派生状态：容器类名 */
 const classes = computed(() => [
   'wt-card',
@@ -22,8 +26,8 @@ const classes = computed(() => [
 </script>
 
 <template>
-  <div :class="classes">
-    <div v-if="$slots.header || title" class="wt-card__header">
+  <div :class="classes" :style="highlightStyle">
+    <div v-if="$slots.header || $slots.extra || title" class="wt-card__header">
       <slot name="header">
         <span class="wt-card__title">{{ title }}</span>
       </slot>

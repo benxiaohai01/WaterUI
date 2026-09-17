@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { AnchorLinkProps } from './props'
 import { useAnchor } from './context'
 
@@ -25,19 +25,53 @@ const classes = computed(() => [
   props.customClass
 ])
 
+/* 派生状态：规范化后的锚点 hash */
+const targetHash = computed(() => `#${props.href.replace(/^#/, '')}`)
+
+/* 响应式状态：注册时的锚点快照（href 动态变化时用于注销旧注册项） */
+const registeredHref = ref('')
+
 /* 注册到父级 Anchor */
-onMounted(() => anchor?.register(props.href))
-onBeforeUnmount(() => anchor?.unregister(props.href))
+const register = () => {
+  if (!anchor || !props.href) return
+  registeredHref.value = props.href
+  anchor.register(props.href)
+}
+
+/* 注销已注册锚点 */
+const unregister = () => {
+  if (!anchor || !registeredHref.value) return
+  anchor.unregister(registeredHref.value)
+  registeredHref.value = ''
+}
+
+onMounted(register)
+onBeforeUnmount(unregister)
+
+/* href 动态变化：先注销旧锚点再注册新锚点 */
+watch(
+  () => props.href,
+  () => {
+    unregister()
+    register()
+  }
+)
 
 /* 交互处理逻辑：点击锚点 */
 const handleClick = () => {
-  anchor?.onClick(props.href)
+  /* 有父级 Anchor 时由父级统一负责滚动与地址栏 hash 同步，避免重复写入 */
+  if (anchor) {
+    anchor.onClick(props.href)
+    return
+  }
+  /* 独立使用时保留 prevent 避免页面跳动，同时同步地址栏 hash */
+  history.replaceState(null, '', targetHash.value)
 }
 </script>
 
 <template>
   <li :class="classes">
-    <a :href="`#${href.replace(/^#/, '')}`" :class="{ 'is-active': active }" @click.prevent="handleClick">
+    <a :href="targetHash" :class="{ 'is-active': active }" @click.prevent="handleClick">
       <slot>{{ title || href }}</slot>
     </a>
   </li>
@@ -71,7 +105,7 @@ const handleClick = () => {
   /* 背景 */
   background: var(--wt-primary);
   /* 过渡动画 */
-  transition: height 0.2s ease;
+  transition: height var(--wt-motion-fast) ease;
 }
 
 .wt-anchor-link.is-active::before {
@@ -94,8 +128,8 @@ const handleClick = () => {
   line-height: 1.5;
   /* 过渡动画 */
   transition:
-    color 0.2s ease,
-    transform 0.2s ease;
+    color var(--wt-motion-fast) ease,
+    transform var(--wt-motion-fast) ease;
 }
 
 .wt-anchor-link a:hover {

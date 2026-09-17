@@ -16,14 +16,28 @@ const props = withDefaults(defineProps<CollapseProps>(), {
 /* 声明组件事件 */
 const emit = defineEmits<CollapseEmits>()
 
+/* 归一化激活 key：手风琴模式统一为字符串，避免数组型 v-model 被污染 */
+const normalizeActive = (value: string | string[]): string | string[] => {
+  if (!props.accordion) return value
+  return Array.isArray(value) ? value[0] ?? '' : value
+}
+
 /* 响应式状态：内部激活 key（受控） */
-const innerActive = ref<string | string[]>(props.activeKey)
+const innerActive = ref<string | string[]>(normalizeActive(props.activeKey))
 
 /* 同步外部 activeKey 变化 */
 watch(
   () => props.activeKey,
   (value) => {
-    innerActive.value = value
+    innerActive.value = normalizeActive(value)
+  }
+)
+
+/* 手风琴模式切换时同步归一化，保证类型一致 */
+watch(
+  () => props.accordion,
+  () => {
+    innerActive.value = normalizeActive(innerActive.value)
   }
 )
 

@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import type { RateProps } from './props'
 import { WtIcon } from '../icon'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtRate' })
@@ -21,19 +22,32 @@ const emit = defineEmits<{
   change: [value: number]
 }>()
 
-/* 派生状态（计算属性） */
-const items = computed(() => Array.from({ length: props.max }, (_, index) => index + 1))
+/* 组件级高光参数（优先级高于全局配置） */
+const highlightStyle = useHighlightStyle(props)
 
-/* 交互处理逻辑 */
-const select = (value: number) => {
+/* 派生状态（计算属性）：最大评分值收敛为 1~10 的整数，避免极大值渲染海量节点 */
+const max = computed(() => {
+  const value = Math.trunc(Number(props.max))
+  if (!Number.isFinite(value)) return 5
+  return Math.min(10, Math.max(1, value))
+})
+
+/* 派生状态（计算属性） */
+const items = computed(() => Array.from({ length: max.value }, (_, index) => index + 1))
+
+/* 交互处理逻辑：allowHalf 时按点击位置判定左半（x.5）/右半（x） */
+const select = (event: MouseEvent, item: number) => {
   if (props.disabled) return
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+  const isHalf = props.allowHalf && rect.width > 0 && event.clientX - rect.left < rect.width / 2
+  const value = isHalf ? item - 0.5 : item
   emit('update:modelValue', value)
   emit('change', value)
 }
 </script>
 
 <template>
-  <div class="wt-rate" :class="[{ 'is-disabled': disabled }, customClass]">
+  <div class="wt-rate" :class="[{ 'is-disabled': disabled }, customClass]" :style="highlightStyle">
     <button
       v-for="item in items"
       :key="item"
@@ -42,7 +56,7 @@ const select = (value: number) => {
       :class="{ 'is-active': modelValue >= item }"
       :aria-label="`评分 ${item}`"
       :disabled="disabled"
-      @click="select(item)"
+      @click="select($event, item)"
     >
       <wt-icon name="star" :size="22" color="var(--wt-text-placeholder)" />
       <span
@@ -57,81 +71,31 @@ const select = (value: number) => {
   </div>
 </template>
 <style scoped lang="scss">
+@use '@water-ui/theme/src/mixins/index.scss' as wt;
+
 .wt-rate {
-  /* 定位方式 */
-  position: relative;
-  /* 创建独立层叠上下文，隔离内部元素 */
-  isolation: isolate;
-  /* 高光尺寸 */
-  --wt-highlight-size: min(var(--wt-highlight-size-base), 9px);
-  /* 次高光尺寸 */
-  --wt-highlight-small-size: min(calc(var(--wt-highlight-size-base) * 0.5), 4px);
-  /* 高光内边距 */
-  --wt-highlight-inset: 3px;
+  /* 水滴高光：定位方式 + 独立层叠上下文 + 主/次高光伪元素（层叠层级 2） */
+  @include wt.wt-liquid-highlights(2);
+  /* 高光尺寸（随全局基准等比缩放，9px / 12px） */
+  --wt-highlight-size: calc(var(--wt-highlight-size-base) * 0.75);
+  /* 次高光尺寸（随全局基准等比缩放，4px / 12px） */
+  --wt-highlight-small-size: calc(var(--wt-highlight-size-base) * 0.5 * 0.6667);
+  /* 高光内边距（随全局偏移等比缩放，3px / 8px） */
+  --wt-highlight-inset: calc(var(--wt-highlight-offset) * 0.375);
   /* 高光顶部定位 */
   --wt-highlight-top: var(--wt-highlight-inset);
   /* 高光右侧定位 */
   --wt-highlight-right: var(--wt-highlight-inset);
   /* 次高光顶部定位 */
-  --wt-highlight-small-top: calc(var(--wt-highlight-top) + var(--wt-highlight-size) + var(--wt-highlight-group-gap));
+  --wt-highlight-small-top: calc(min(var(--wt-highlight-inset), calc(100% - var(--wt-highlight-size) - 4px)) + var(--wt-highlight-size) + var(--wt-highlight-group-gap));
   /* 次高光右侧定位 */
-  --wt-highlight-small-right: calc(var(--wt-highlight-right) + var(--wt-highlight-size) + var(--wt-highlight-group-gap));
+  --wt-highlight-small-right: calc(min(var(--wt-highlight-inset), calc(100% - var(--wt-highlight-size) - 4px)) + var(--wt-highlight-size) + var(--wt-highlight-group-gap));
   /* 盒模型显示方式 */
   display: inline-flex;
   /* 交叉轴对齐方式 */
   align-items: center;
   /* 元素间距 */
   gap: 4px;
-}
-
-.wt-rate::after,
-.wt-rate::before {
-  /* 伪元素内容 */
-  content: '';
-  /* 定位方式 */
-  position: absolute;
-  /* 是否响应鼠标事件 */
-  pointer-events: none;
-  /* 层叠层级 */
-  z-index: 2;
-}
-
-.wt-rate::after {
-  /* 宽度 */
-  width: var(--wt-highlight-size);
-  /* 高度 */
-  height: var(--wt-highlight-size);
-  /* 顶部偏移 */
-  top: var(--wt-highlight-top);
-  /* 右侧偏移 */
-  right: var(--wt-highlight-right);
-  /* 背景 */
-  background: var(--wt-highlight);
-  /* 圆角，塑造水滴/液体轮廓 */
-  border-radius: var(--wt-highlight-radius);
-  /* 动画 */
-  animation: wt-highlight-float var(--wt-motion-normal) ease-in-out infinite;
-  /* 透明度 */
-  opacity: var(--wt-highlight-opacity);
-}
-
-.wt-rate::before {
-  /* 宽度 */
-  width: var(--wt-highlight-small-size);
-  /* 高度 */
-  height: var(--wt-highlight-small-size);
-  /* 顶部偏移 */
-  top: var(--wt-highlight-small-top);
-  /* 右侧偏移 */
-  right: var(--wt-highlight-small-right);
-  /* 背景 */
-  background: var(--wt-highlight-small);
-  /* 圆角，塑造水滴/液体轮廓 */
-  border-radius: var(--wt-highlight-small-radius);
-  /* 动画 */
-  animation: wt-highlight-float-small var(--wt-motion-slow) ease-in-out infinite;
-  /* 透明度 */
-  opacity: var(--wt-highlight-small-opacity);
 }
 
 .wt-rate__item {
@@ -151,15 +115,13 @@ const select = (value: number) => {
   overflow: hidden;
   /* 圆角，塑造水滴/液体轮廓 */
   border-radius: 14px 10px 16px 11px / 11px 14px 10px 16px;
-  /* 动画 */
-  animation: wt-rate-liquid var(--wt-motion-normal) ease-in-out infinite;
-  /* 动画性能提示 */
-  will-change: border-radius;
+  /* 液体形变动画（自定义动画名 wt-rate-liquid，含 will-change: border-radius） */
+  @include wt.wt-liquid-animation(wt-rate-liquid, var(--wt-motion-normal), border-radius);
   /* 过渡动画 */
   transition:
-    transform 0.2s ease,
-    background 0.25s ease,
-    box-shadow 0.25s ease;
+    transform var(--wt-motion-fast) ease,
+    background var(--wt-motion-fast) ease,
+    box-shadow var(--wt-motion-fast) ease;
 }
 
 .wt-rate__item:hover {

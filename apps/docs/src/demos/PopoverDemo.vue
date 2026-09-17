@@ -6,6 +6,7 @@ const visible = ref(false)
 
 <template>
   <wt-popover
+    v-model:visible="visible"
     title="水滴气泡"
     content="气泡卡片适合承载更多信息与操作。"
     placement="bottom"

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { DropdownItemProps } from './props'
 import { useDropdown } from './context'
 
@@ -23,20 +23,44 @@ const classes = computed(() => [
   props.customClass
 ])
 
+/* 响应式状态：菜单项元素引用（用于键盘移动焦点） */
+const itemRef = ref<HTMLElement>()
+
 /* 交互处理逻辑：点击菜单项 */
 const handleClick = () => {
   if (props.disabled || !dropdown) return
   dropdown.onCommand(props.command)
   dropdown.onItemClick()
 }
+
+/* 交互处理逻辑：在菜单项之间循环移动焦点 */
+const moveFocus = (direction: 1 | -1) => {
+  const menu = itemRef.value?.closest('.wt-dropdown-menu')
+  if (!menu || !itemRef.value) return
+  const items = Array.from(
+    menu.querySelectorAll<HTMLElement>('.wt-dropdown-item:not(.is-disabled)')
+  )
+  if (items.length === 0) return
+  const current = Math.max(items.indexOf(itemRef.value), 0)
+  items[(current + direction + items.length) % items.length].focus()
+}
+
+/* 交互处理逻辑：上下方向键移动焦点 */
+const handleKeydown = (event: KeyboardEvent) => {
+  if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+  event.preventDefault()
+  moveFocus(event.key === 'ArrowDown' ? 1 : -1)
+}
 </script>
 
 <template>
   <li
+    ref="itemRef"
     :class="classes"
     role="menuitem"
     tabindex="0"
     @click="handleClick"
+    @keydown="handleKeydown"
     @keydown.enter.prevent="handleClick"
   >
     <slot />
@@ -59,8 +83,8 @@ const handleClick = () => {
   cursor: pointer;
   /* 过渡动画 */
   transition:
-    background 0.2s ease,
-    color 0.2s ease;
+    background var(--wt-motion-fast) ease,
+    color var(--wt-motion-fast) ease;
 }
 
 .wt-dropdown-item:hover:not(.is-disabled) {

@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import type { LoadingProps } from './props'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtLoading' })
 
 /* 声明组件入参与默认值 */
-withDefaults(defineProps<LoadingProps>(), {
+const props = withDefaults(defineProps<LoadingProps>(), {
   modelValue: false,
   text: '',
   fullscreen: false,
@@ -13,6 +14,8 @@ withDefaults(defineProps<LoadingProps>(), {
   customClass: ''
 })
 
+/* 组件级高光参数（优先级高于全局配置）；加载层经 Teleport 渲染，故绑定到实际渲染的元素 */
+const highlightStyle = useHighlightStyle(props)
 </script>
 
 <template>
@@ -27,6 +30,7 @@ withDefaults(defineProps<LoadingProps>(), {
       ]"
       role="status"
       aria-live="polite"
+      :style="highlightStyle"
     >
       <span class="wt-loading__drop" aria-hidden="true" />
       <span v-if="text" class="wt-loading__text">{{ text }}</span>
@@ -35,6 +39,8 @@ withDefaults(defineProps<LoadingProps>(), {
 </template>
 
 <style scoped lang="scss">
+@use '@water-ui/theme/src/mixins/index.scss' as wt;
+
 .wt-loading {
   /* 盒模型显示方式 */
   display: inline-flex;
@@ -55,8 +61,8 @@ withDefaults(defineProps<LoadingProps>(), {
 .wt-loading.is-fullscreen {
   /* 定位方式 */
   position: fixed;
-  /* 层叠层级 */
-  z-index: 3000;
+  /* 层叠层级：需高于弹窗（3400），避免全屏加载被弹层遮挡 */
+  z-index: 3700;
   /* 上下左右偏移合成属性 */
   inset: 0;
   /* 背景 */
@@ -71,7 +77,7 @@ withDefaults(defineProps<LoadingProps>(), {
   /* 盒模型显示方式 */
   display: block;
   /* 圆角，塑造水滴/液体轮廓 */
-  border-radius: 52% 48% 70% 30% / 46% 38% 62% 54%;
+  border-radius: var(--wt-highlight-radius);
   /* 背景 */
   background: linear-gradient(
     145deg,
@@ -83,10 +89,8 @@ withDefaults(defineProps<LoadingProps>(), {
     inset 2px 3px 6px rgba(0, 0, 0, 0.18),
     inset -2px -2px 5px rgba(255, 255, 255, 0.24),
     0 6px 16px color-mix(in srgb, var(--wt-primary) 30%, transparent);
-  /* 动画 */
-  animation: wt-loading-drop 1.6s ease-in-out infinite;
-  /* 动画性能提示 */
-  will-change: transform, border-radius;
+  /* 液体形变动画（自定义动画名 wt-loading-drop，含 will-change: transform, border-radius） */
+  @include wt.wt-liquid-animation(wt-loading-drop, 1.6s, (transform, border-radius));
 }
 
 .wt-loading__drop::after,
@@ -162,21 +166,21 @@ withDefaults(defineProps<LoadingProps>(), {
     /* 形变 */
     transform: scale(0.92) rotate(0deg);
     /* 圆角，塑造水滴/液体轮廓 */
-    border-radius: 52% 48% 70% 30% / 46% 38% 62% 54%;
+    border-radius: var(--wt-highlight-radius);
   }
 
   50% {
     /* 形变 */
     transform: scale(1.08) rotate(8deg);
     /* 圆角，塑造水滴/液体轮廓 */
-    border-radius: 64% 36% 58% 42% / 42% 56% 44% 58%;
+    border-radius: var(--wt-highlight-small-radius);
   }
 
   100% {
     /* 形变 */
     transform: scale(0.92) rotate(0deg);
     /* 圆角，塑造水滴/液体轮廓 */
-    border-radius: 52% 48% 70% 30% / 46% 38% 62% 54%;
+    border-radius: var(--wt-highlight-radius);
   }
 }
 </style>

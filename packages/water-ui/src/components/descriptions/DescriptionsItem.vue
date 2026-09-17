@@ -16,16 +16,19 @@ const props = withDefaults(defineProps<DescriptionsItemProps>(), {
 /* 注入父级上下文 */
 const descriptions = useDescriptions()
 
-/* 派生状态：网格列跨度 */
+/* 派生状态：网格列跨度（至少 1 列，且不超过总列数） */
 const gridSpan = computed(() => {
   const column = descriptions?.column ?? 3
-  return Math.min(props.span, column)
+  return Math.max(1, Math.min(props.span, column))
 })
+
+/* 派生状态：是否带边框（由父级 bordered 控制） */
+const bordered = computed(() => descriptions?.bordered ?? false)
 </script>
 
 <template>
   <div
-    :class="['wt-descriptions-item', props.customClass]"
+    :class="['wt-descriptions-item', { 'is-bordered': bordered }, props.customClass]"
     :style="{
       gridColumn: `span ${gridSpan}`
     }"
@@ -49,6 +52,13 @@ const gridSpan = computed(() => {
   min-width: 0;
   /* 边框 */
   border-bottom: 1px solid color-mix(in srgb, var(--wt-text-secondary) 10%, transparent);
+}
+
+.wt-descriptions-item.is-bordered {
+  /* 边框 */
+  border: 1px solid var(--wt-surface-strong);
+  /* 圆角，塑造水滴/液体轮廓 */
+  border-radius: var(--wt-radius-xs);
 }
 
 .wt-descriptions-item__label {

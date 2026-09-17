@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, provide, reactive } from 'vue'
+import { computed, onMounted, provide, reactive } from 'vue'
 import type { FormProps } from './props'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
@@ -43,13 +43,23 @@ const validate = () => {
   return valid
 }
 
+/* 响应式状态：初始值快照（用于 resetFields 按原值与原类型还原） */
+const initialModel: Record<string, unknown> = {}
+
+onMounted(() => {
+  Object.assign(initialModel, props.modelValue)
+})
+
 /* 交互处理逻辑 */
 const resetFields = () => {
-  const nextModel = { ...props.modelValue }
-  Object.keys(nextModel).forEach((key) => {
-    nextModel[key] = ''
+  /* 直接改回原值，兼容 reactive 传入的表单对象 */
+  Object.keys(initialModel).forEach((key) => {
+    if (key in props.modelValue) {
+      props.modelValue[key] = initialModel[key]
+    }
   })
-  emit('update:modelValue', nextModel)
+  /* 同时派发新对象，兼容以整体替换方式实现的 v-model */
+  emit('update:modelValue', { ...props.modelValue })
   fields.forEach((field) => field.clear())
 }
 
@@ -58,13 +68,26 @@ const clearValidate = () => {
   fields.forEach((field) => field.clear())
 }
 
+/* 通过 getter 暴露响应式配置，避免 provide 值快照导致动态变更失效 */
 provide('wtForm', {
-  model: props.modelValue,
-  rules: props.rules,
-  size: props.size,
-  disabled: props.disabled,
-  labelWidth: props.labelWidth,
-  labelPosition: props.labelPosition,
+  get model() {
+    return props.modelValue
+  },
+  get rules() {
+    return props.rules
+  },
+  get size() {
+    return props.size
+  },
+  get disabled() {
+    return props.disabled
+  },
+  get labelWidth() {
+    return props.labelWidth
+  },
+  get labelPosition() {
+    return props.labelPosition
+  },
   registerField,
   unregisterField
 })

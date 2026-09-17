@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import type { TimePickerProps } from './props'
 import { resolveSize } from '../config-provider/context'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtTimePicker' })
@@ -28,13 +29,17 @@ const emit = defineEmits<{
 /* 解析组件尺寸配置 */
 const size = resolveSize(() => props.size)
 
+/* 组件级高光参数（优先级高于全局配置） */
+const highlightStyle = useHighlightStyle(props)
+
 /* 派生状态（计算属性） */
 const classes = computed(() => [
   'wt-time-picker',
   `wt-time-picker--${size.value}`,
   {
     'is-disabled': props.disabled,
-    'is-readonly': props.readonly
+    'is-readonly': props.readonly,
+    'is-clearable': props.clearable
   },
   props.customClass
 ])
@@ -58,7 +63,7 @@ const clear = () => {
 </script>
 
 <template>
-  <div :class="classes">
+  <div :class="classes" :style="highlightStyle">
     <input
       class="wt-time-picker__native"
       type="time"
@@ -72,7 +77,7 @@ const clear = () => {
       @blur="(event: FocusEvent) => emit('blur', event)"
     >
     <button
-      v-if="clearable && modelValue"
+      v-if="clearable && modelValue && !disabled && !readonly"
       class="wt-time-picker__clear"
       type="button"
       aria-label="清空"
@@ -83,17 +88,17 @@ const clear = () => {
   </div>
 </template>
 <style scoped lang="scss">
+@use '@water-ui/theme/src/mixins/index.scss' as wt;
+
 .wt-time-picker {
-  /* 高光尺寸 */
-  --wt-highlight-size: min(var(--wt-highlight-size-base), 11px);
-  /* 次高光尺寸 */
-  --wt-highlight-small-size: min(calc(var(--wt-highlight-size-base) * 0.5), 6px);
-  /* 高光内边距 */
-  --wt-highlight-inset: min(var(--wt-highlight-offset), 6px);
-  /* 定位方式 */
-  position: relative;
-  /* 创建独立层叠上下文，隔离内部元素 */
-  isolation: isolate;
+  /* 高光尺寸（随全局基准等比缩放） */
+  --wt-highlight-size: calc(var(--wt-highlight-size-base) * 0.9167);
+  /* 次高光尺寸（随全局基准等比缩放） */
+  --wt-highlight-small-size: calc(var(--wt-highlight-size-base) * 0.5);
+  /* 高光内边距（随全局偏移等比缩放） */
+  --wt-highlight-inset: calc(var(--wt-highlight-offset) * 0.75);
+  /* 水滴高光：定位方式 + 独立层叠上下文 + 主/次高光伪元素（层叠层级 2） */
+  @include wt.wt-liquid-highlights(2);
   /* 盒模型显示方式 */
   display: inline-flex;
   /* 交叉轴对齐方式 */
@@ -121,57 +126,7 @@ const clear = () => {
   /* 动画 */
   animation: wt-liquid-flow-subtle var(--wt-motion-slow) ease-in-out infinite;
   /* 过渡动画 */
-  transition: box-shadow 0.25s ease;
-}
-
-.wt-time-picker::after,
-.wt-time-picker::before {
-  /* 伪元素内容 */
-  content: '';
-  /* 定位方式 */
-  position: absolute;
-  /* 是否响应鼠标事件 */
-  pointer-events: none;
-  /* 层叠层级 */
-  z-index: 2;
-}
-
-.wt-time-picker::after {
-  /* 宽度 */
-  width: var(--wt-highlight-size);
-  /* 高度 */
-  height: var(--wt-highlight-size);
-  /* 顶部偏移 */
-  top: var(--wt-highlight-top);
-  /* 右侧偏移 */
-  right: var(--wt-highlight-right);
-  /* 背景 */
-  background: var(--wt-highlight);
-  /* 圆角，塑造水滴/液体轮廓 */
-  border-radius: var(--wt-highlight-radius);
-  /* 动画 */
-  animation: wt-highlight-float var(--wt-motion-normal) ease-in-out infinite;
-  /* 透明度 */
-  opacity: var(--wt-highlight-opacity);
-}
-
-.wt-time-picker::before {
-  /* 宽度 */
-  width: var(--wt-highlight-small-size);
-  /* 高度 */
-  height: var(--wt-highlight-small-size);
-  /* 顶部偏移 */
-  top: var(--wt-highlight-small-top);
-  /* 右侧偏移 */
-  right: var(--wt-highlight-small-right);
-  /* 背景 */
-  background: var(--wt-highlight-small);
-  /* 圆角，塑造水滴/液体轮廓 */
-  border-radius: var(--wt-highlight-small-radius);
-  /* 动画 */
-  animation: wt-highlight-float-small var(--wt-motion-slow) ease-in-out infinite;
-  /* 透明度 */
-  opacity: var(--wt-highlight-small-opacity);
+  transition: box-shadow var(--wt-motion-fast) ease;
 }
 
 .wt-time-picker__native {

@@ -1,4 +1,6 @@
-export interface CardProps {
+import type { HighlightProps } from '../../utils/highlight'
+
+export interface CardProps extends HighlightProps {
   /** 卡片标题 */
   title?: string
   /** 是否显示边框 */

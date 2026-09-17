@@ -1,9 +1,21 @@
-import { createApp, h } from 'vue'
+import { createApp, h, ref, type Ref } from 'vue'
 import Notification from './Notification.vue'
 import type { NotificationOptions, NotificationType } from './props'
 
-/* 组件实现：通知实例的暂存节点 */
-let nextOffset = 24
+/* 组件实现：首条通知距视口顶部偏移 */
+const NOTIFICATION_BASE_OFFSET = 24
+/* 组件实现：相邻通知的偏移步长（按通知高度估值） */
+const NOTIFICATION_OFFSET_STEP = 96
+
+/* 组件实现：活跃通知实例列表（每项持有偏移 ref，用于重排） */
+const instances: Array<{ offset: Ref<number> }> = []
+
+/* 交互处理逻辑：按活跃顺序重排所有通知偏移，避免越界与空洞 */
+function relayout() {
+  instances.forEach((item, index) => {
+    item.offset.value = NOTIFICATION_BASE_OFFSET + index * NOTIFICATION_OFFSET_STEP
+  })
+}
 
 /* 交互处理逻辑：卸载通知实例 */
 function cleanupNotification(app: ReturnType<typeof createApp>, host: HTMLDivElement) {
@@ -13,10 +25,14 @@ function cleanupNotification(app: ReturnType<typeof createApp>, host: HTMLDivEle
 
 /* 组件实现：创建全局 Notification 实例 */
 function openNotification(options: NotificationOptions) {
+  /* SSR 守卫：无 document 环境不创建实例 */
+  if (typeof document === 'undefined') return () => undefined
   const host = document.createElement('div')
   document.body.appendChild(host)
-  const offset = nextOffset
-  nextOffset += 96
+  const offset = ref(NOTIFICATION_BASE_OFFSET)
+  const record = { offset }
+  instances.push(record)
+  relayout()
   const app = createApp({
     render: () =>
       h(Notification, {
@@ -25,13 +41,26 @@ function openNotification(options: NotificationOptions) {
         type: options.type ?? 'info',
         duration: options.duration ?? 4500,
         showClose: options.showClose ?? true,
-        offset,
+        offset: offset.value,
         customClass: options.customClass,
-        onClose: () => cleanupNotification(app, host)
+        highlightSize: options.highlightSize,
+        highlightOffset: options.highlightOffset,
+        highlightOpacity: options.highlightOpacity,
+        onClose: () => close()
       })
   })
+  let active = true
+  /* 交互处理逻辑：关闭当前通知（幂等，重复调用不二次卸载） */
+  const close = () => {
+    if (!active) return
+    active = false
+    cleanupNotification(app, host)
+    const index = instances.indexOf(record)
+    if (index >= 0) instances.splice(index, 1)
+    relayout()
+  }
   app.mount(host)
-  return () => cleanupNotification(app, host)
+  return close
 }
 
 export interface NotificationFunction {

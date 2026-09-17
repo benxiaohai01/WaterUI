@@ -33,12 +33,23 @@ const handleClick = () => {
 </script>
 
 <template>
-  <li :class="classes" role="menuitem" :aria-current="active ? 'page' : undefined" @click="handleClick">
+  <li
+    :class="classes"
+    role="menuitem"
+    :tabindex="disabled ? -1 : 0"
+    :aria-disabled="disabled || undefined"
+    :aria-current="active ? 'page' : undefined"
+    @click="handleClick"
+    @keydown.enter.prevent="handleClick"
+    @keydown.space.prevent="handleClick"
+  >
     <slot />
   </li>
 </template>
 
 <style scoped lang="scss">
+@use '@water-ui/theme/src/mixins/index.scss' as wt;
+
 .wt-menu-item {
   /* 盒模型显示方式 */
   display: flex;
@@ -60,9 +71,9 @@ const handleClick = () => {
   cursor: pointer;
   /* 过渡动画 */
   transition:
-    background 0.2s ease,
-    color 0.2s ease,
-    transform 0.2s ease;
+    background var(--wt-motion-fast) ease,
+    color var(--wt-motion-fast) ease,
+    transform var(--wt-motion-fast) ease;
 }
 
 .wt-menu-item:hover:not(.is-disabled) {
@@ -73,6 +84,12 @@ const handleClick = () => {
 }
 
 .wt-menu-item.is-active {
+  /* 水滴高光：定位方式 + 独立层叠上下文 + 主/次高光伪元素（层叠层级 2） */
+  @include wt.wt-liquid-highlights(2);
+  /* 溢出裁剪方式（高光收束在菜单项内） */
+  overflow: hidden;
+  /* 液体形变动画（含 will-change: border-radius） */
+  @include wt.wt-liquid-animation(wt-liquid-flow, var(--wt-motion-normal), border-radius);
   /* 背景 */
   background: linear-gradient(
     145deg,

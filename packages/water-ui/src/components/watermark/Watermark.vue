@@ -60,7 +60,8 @@ const watermarkUrl = computed(() => {
 
   const serializer = new XMLSerializer()
   const svgStr = serializer.serializeToString(svg)
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgStr)}`
+  /* 单引号需转义为 %27：URL 以单引号包裹，未转义时文本含撇号会导致水印整体失效 */
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgStr).replace(/'/g, '%27')}`
 })
 
 /* 水印层背景样式 */

@@ -49,11 +49,15 @@ const paths: Record<IconName, string> = {
   bell: 'M6 8a6 6 0 0 1 12 0c0 7 2 8 2 8H4s2-1 2-8Zm3 12h6'
 }
 
-/* 派生状态（计算属性） */
-const viewBox = computed(() => '0 0 24 24')
-
-/* 派生状态（计算属性） */
-const pathData = computed(() => paths[props.name] ?? paths.search)
+/* 派生状态（计算属性）：图标路径数据（未知名称回退为 search 并提示） */
+const pathData = computed(() => {
+  const path = paths[props.name]
+  if (path) return path
+  if (import.meta.env.DEV) {
+    console.warn(`[Water UI] WtIcon 收到未知图标名称：${props.name}，已回退为 search。`)
+  }
+  return paths.search
+})
 
 /* 派生状态（计算属性） */
 const sizeStyle = computed(() => {
@@ -70,7 +74,7 @@ const sizeStyle = computed(() => {
     <svg
       :width="size"
       :height="size"
-      :viewBox="viewBox"
+      viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
       stroke-width="1.8"
@@ -87,7 +91,7 @@ const sizeStyle = computed(() => {
     v-else
     :width="size"
     :height="size"
-    :viewBox="viewBox"
+    viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
     stroke-width="1.8"
@@ -101,6 +105,8 @@ const sizeStyle = computed(() => {
   </svg>
 </template>
 <style scoped lang="scss">
+@use '@water-ui/theme/src/mixins/index.scss' as wt;
+
 .wt-icon {
   /* 定位方式 */
   position: relative;
@@ -127,10 +133,8 @@ const sizeStyle = computed(() => {
     inset 2px 3px 6px rgba(0, 0, 0, 0.14),
     inset -1px -1px 3px var(--wt-shadow-light),
     2px 3px 8px rgba(0, 0, 0, 0.08);
-  /* 动画 */
-  animation: wt-liquid-flow var(--wt-motion-slow) ease-in-out infinite;
-  /* 动画性能提示 */
-  will-change: transform;
+  /* 液体形变动画（含 will-change: transform） */
+  @include wt.wt-liquid-animation(wt-liquid-flow, var(--wt-motion-slow), transform);
 }
 
 .wt-icon::after {
@@ -143,9 +147,9 @@ const sizeStyle = computed(() => {
   /* 高度 */
   height: var(--wt-highlight-size);
   /* 顶部偏移 */
-  top: var(--wt-highlight-top);
+  top: min(var(--wt-highlight-inset), calc(100% - var(--wt-highlight-size) - 4px));
   /* 右侧偏移 */
-  right: var(--wt-highlight-right);
+  right: min(var(--wt-highlight-inset), calc(100% - var(--wt-highlight-size) - 4px));
   /* 背景 */
   background: var(--wt-highlight);
   /* 圆角，塑造水滴/液体轮廓 */
@@ -170,9 +174,9 @@ const sizeStyle = computed(() => {
   /* 高度 */
   height: var(--wt-highlight-small-size);
   /* 顶部偏移 */
-  top: var(--wt-highlight-small-top);
+  top: min(calc(var(--wt-highlight-inset) + var(--wt-highlight-size) + var(--wt-highlight-group-gap)), calc(100% - var(--wt-highlight-small-size) - 4px));
   /* 右侧偏移 */
-  right: var(--wt-highlight-small-right);
+  right: min(calc(var(--wt-highlight-inset) + var(--wt-highlight-size) + var(--wt-highlight-group-gap)), calc(100% - var(--wt-highlight-small-size) - 4px));
   /* 背景 */
   background: var(--wt-highlight-small);
   /* 圆角，塑造水滴/液体轮廓 */

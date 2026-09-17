@@ -1,11 +1,20 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 
 const loading = ref(true)
 
-setTimeout(() => {
-  loading.value = false
-}, 2500)
+/* 定时器句柄，卸载时清理，避免离开页面后仍修改状态 */
+let timer: number | undefined
+
+onMounted(() => {
+  timer = window.setTimeout(() => {
+    loading.value = false
+  }, 2500)
+})
+
+onBeforeUnmount(() => {
+  window.clearTimeout(timer)
+})
 </script>
 
 <template>

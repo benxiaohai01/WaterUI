@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { BadgeProps } from './props'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtBadge' })
@@ -13,6 +14,9 @@ const props = withDefaults(defineProps<BadgeProps>(), {
   hidden: false,
   type: 'danger'
 })
+
+/* 组件级高光参数（优先级高于全局配置） */
+const highlightStyle = useHighlightStyle(props)
 
 /* 派生状态：展示文本（数字超上限时显示 max+） */
 const displayValue = computed(() => {
@@ -38,7 +42,7 @@ const badgeClasses = computed(() => [
 </script>
 
 <template>
-  <span :class="classes">
+  <span :class="classes" :style="highlightStyle">
     <slot />
     <sup
       v-if="!hidden && (dot || displayValue !== '')"
@@ -113,6 +117,8 @@ const badgeClasses = computed(() => [
 .wt-badge--default {
   /* 背景 */
   background: color-mix(in srgb, var(--wt-surface-strong) 90%, var(--wt-text-secondary));
+  /* 文本颜色：浅色底使用正文色，保证对比度 */
+  color: var(--wt-text);
 }
 
 .wt-badge--primary {
@@ -151,10 +157,5 @@ const badgeClasses = computed(() => [
   padding: 0;
   /* 圆角 */
   border-radius: 50%;
-}
-
-.wt-badge.is-hidden .wt-badge__content {
-  /* 显示方式 */
-  display: none;
 }
 </style>

@@ -14,6 +14,8 @@ export interface TreeNode {
 export interface TreeProps {
   /** 树数据 */
   data: TreeNode[]
+  /** 选中节点 key 列表（v-model:selectedKeys，受控） */
+  selectedKeys?: string[]
   /** 是否多选 */
   multiple?: boolean
   /** 是否默认展开所有节点 */
@@ -29,4 +31,6 @@ export interface TreeEmits {
   nodeClick: [node: TreeNode]
   /** 选中变化 */
   change: [selectedKeys: string[]]
+  /** 选中节点双向绑定 */
+  'update:selectedKeys': [selectedKeys: string[]]
 }

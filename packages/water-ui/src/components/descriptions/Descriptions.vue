@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { DescriptionsProps } from './props'
 import { provideDescriptions } from './context'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtDescriptions' })
@@ -12,6 +14,12 @@ const props = withDefaults(defineProps<DescriptionsProps>(), {
   bordered: false,
   customClass: ''
 })
+
+/* 组件级高光参数（优先级高于全局配置） */
+const highlightStyle = useHighlightStyle(props)
+
+/* 派生状态：网格列数（至少 1 列） */
+const columns = computed(() => Math.max(1, Math.floor(props.column)))
 
 /* 提供上下文 */
 provideDescriptions({
@@ -27,7 +35,11 @@ provideDescriptions({
 <template>
   <div :class="['wt-descriptions', props.customClass]">
     <div v-if="title" class="wt-descriptions__title">{{ title }}</div>
-    <div class="wt-descriptions__body">
+    <div
+      class="wt-descriptions__body"
+      :class="{ 'is-bordered': bordered }"
+      :style="[highlightStyle, { gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }]"
+    >
       <slot />
     </div>
   </div>
@@ -64,5 +76,12 @@ provideDescriptions({
     0 6px 16px rgba(0, 0, 0, 0.04);
   /* 溢出隐藏 */
   overflow: hidden;
+}
+
+.wt-descriptions__body.is-bordered {
+  /* 元素间距 */
+  gap: 4px;
+  /* 内边距 */
+  padding: 4px;
 }
 </style>

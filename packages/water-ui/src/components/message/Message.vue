@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import type { MessageProps } from './props'
 import { WtIcon } from '../icon'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtMessage' })
@@ -12,6 +13,7 @@ const props = withDefaults(defineProps<MessageProps>(), {
   type: 'info',
   duration: 3000,
   showClose: false,
+  offset: 24,
   customClass: ''
 })
 
@@ -19,6 +21,12 @@ const props = withDefaults(defineProps<MessageProps>(), {
 const emit = defineEmits<{
   close: []
 }>()
+
+/* 响应式状态：内部可见性（声明式使用时点击关闭可自隐藏） */
+const visible = ref(true)
+
+/* 组件级高光参数（优先级高于全局配置）；消息经 Teleport 渲染，故绑定到消息元素 */
+const highlightStyle = useHighlightStyle(props)
 
 /* 派生状态：消息语义类名 */
 const classes = computed(() => [
@@ -46,10 +54,16 @@ const iconName = computed(() => {
 
 let timer: ReturnType<typeof setTimeout> | undefined
 
+/* 交互处理逻辑：关闭消息（先隐藏自身，再交由外部卸载） */
+const handleClose = () => {
+  visible.value = false
+  emit('close')
+}
+
 /* 交互处理逻辑：倒计时后自动关闭 */
 const startTimer = () => {
   if (props.duration > 0) {
-    timer = setTimeout(() => emit('close'), props.duration)
+    timer = setTimeout(handleClose, props.duration)
   }
 }
 
@@ -64,17 +78,22 @@ onBeforeUnmount(() => {
 
 <template>
   <Teleport to="body">
-    <div :class="classes" role="status">
+    <div
+      v-if="visible"
+      :class="classes"
+      :style="[highlightStyle, { top: `${offset}px` }]"
+      :role="type === 'error' ? 'alert' : 'status'"
+    >
       <span class="wt-message__icon" aria-hidden="true">
         <wt-icon :name="iconName" :size="17" />
       </span>
       <span class="wt-message__text">{{ message }}<slot /></span>
       <button
-        v-if="showClose"
+        v-if="showClose || duration === 0"
         class="wt-message__close"
         type="button"
         aria-label="关闭消息"
-        @click="emit('close')"
+        @click="handleClose"
       >
         <wt-icon name="close" :size="13" />
       </button>
@@ -84,11 +103,17 @@ onBeforeUnmount(() => {
 
 <style scoped lang="scss">
 .wt-message {
+  /* 高光尺寸（随全局基准等比缩放） */
+  --wt-highlight-size: calc(var(--wt-highlight-size-base) * 1.0000);
+  /* 次高光尺寸 */
+  --wt-highlight-small-size: calc(var(--wt-highlight-size-base) * 0.5);
+  /* 高光内边距（随全局偏移等比缩放） */
+  --wt-highlight-inset: calc(var(--wt-highlight-offset) * 1.0000);
   /* 定位方式 */
   position: fixed;
   /* 层叠层级 */
   z-index: 3200;
-  /* 顶部偏移 */
+  /* 顶部偏移（默认值，可被 offset 内联样式覆盖） */
   top: 24px;
   /* 左侧偏移 */
   left: 50%;
@@ -112,7 +137,7 @@ onBeforeUnmount(() => {
     inset -2px -2px 5px var(--wt-shadow-light),
     0 14px 34px rgba(0, 0, 0, 0.12);
   /* 动画 */
-  animation: wt-message-in 0.35s ease both;
+  animation: wt-message-in var(--wt-motion-base) ease both;
   /* 文本颜色 */
   color: var(--wt-text);
 }
@@ -133,9 +158,9 @@ onBeforeUnmount(() => {
   /* 高度 */
   height: var(--wt-highlight-size);
   /* 顶部偏移 */
-  top: var(--wt-highlight-top);
+  top: min(var(--wt-highlight-inset), calc(100% - var(--wt-highlight-size) - 4px));
   /* 右侧偏移 */
-  right: var(--wt-highlight-right);
+  right: min(var(--wt-highlight-inset), calc(100% - var(--wt-highlight-size) - 4px));
   /* 背景 */
   background: var(--wt-highlight);
   /* 圆角，塑造水滴/液体轮廓 */
@@ -152,9 +177,9 @@ onBeforeUnmount(() => {
   /* 高度 */
   height: var(--wt-highlight-small-size);
   /* 顶部偏移 */
-  top: var(--wt-highlight-small-top);
+  top: min(calc(var(--wt-highlight-inset) + var(--wt-highlight-size) + var(--wt-highlight-group-gap)), calc(100% - var(--wt-highlight-small-size) - 4px));
   /* 右侧偏移 */
-  right: var(--wt-highlight-small-right);
+  right: min(calc(var(--wt-highlight-inset) + var(--wt-highlight-size) + var(--wt-highlight-group-gap)), calc(100% - var(--wt-highlight-small-size) - 4px));
   /* 背景 */
   background: var(--wt-highlight-small);
   /* 圆角，塑造水滴/液体轮廓 */
@@ -206,7 +231,7 @@ onBeforeUnmount(() => {
   /* 文本颜色 */
   color: var(--wt-text-placeholder);
   /* 过渡动画 */
-  transition: color 0.2s ease, transform 0.2s ease;
+  transition: color var(--wt-motion-fast) ease, transform var(--wt-motion-fast) ease;
 }
 
 .wt-message__close:hover {

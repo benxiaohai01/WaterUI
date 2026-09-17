@@ -12,7 +12,6 @@ interface TreeNodeCompProps {
   selectedKeys: string[]
   defaultExpandAll: boolean
   showLine: boolean
-  multiple: boolean
 }
 
 /* 声明组件入参与默认值 */
@@ -43,6 +42,21 @@ const toggle = () => {
 const handleClick = () => {
   emit('nodeClick', props.node)
 }
+
+/* 交互处理逻辑：键盘操作（Enter/Space 选中，左右方向键展开/收起） */
+const handleKeydown = (event: KeyboardEvent) => {
+  if (props.node.disabled) return
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault()
+    handleClick()
+  } else if (event.key === 'ArrowRight' && hasChildren.value && !expanded.value) {
+    event.preventDefault()
+    expanded.value = true
+  } else if (event.key === 'ArrowLeft' && hasChildren.value && expanded.value) {
+    event.preventDefault()
+    expanded.value = false
+  }
+}
 </script>
 
 <template>
@@ -53,13 +67,19 @@ const handleClick = () => {
         'is-selected': isSelected,
         'is-disabled': node.disabled
       }"
+      role="treeitem"
+      :tabindex="node.disabled ? -1 : 0"
+      :aria-expanded="hasChildren ? expanded : undefined"
+      :aria-selected="isSelected"
       :style="{ paddingLeft: `${level * 20}px` }"
       @click="handleClick"
+      @keydown="handleKeydown"
     >
       <span
         v-if="hasChildren"
         class="wt-tree-node__switcher"
         :class="{ 'is-expanded': expanded }"
+        aria-hidden="true"
         @click.stop="toggle"
       >
         ▸
@@ -67,7 +87,12 @@ const handleClick = () => {
       <span v-else class="wt-tree-node__switcher wt-tree-node__switcher--leaf" />
       <span class="wt-tree-node__label">{{ node.label }}</span>
     </div>
-    <div v-if="hasChildren && expanded" class="wt-tree-node__children" :class="{ 'has-line': showLine }">
+    <div
+      v-if="hasChildren && expanded"
+      class="wt-tree-node__children"
+      :class="{ 'has-line': showLine }"
+      role="group"
+    >
       <TreeNodeComp
         v-for="child in node.children"
         :key="child.key"
@@ -76,7 +101,6 @@ const handleClick = () => {
         :selected-keys="selectedKeys"
         :default-expand-all="defaultExpandAll"
         :show-line="showLine"
-        :multiple="multiple"
         @node-click="emit('nodeClick', $event)"
       />
     </div>
@@ -98,7 +122,7 @@ const handleClick = () => {
   /* 鼠标指针样式 */
   cursor: pointer;
   /* 过渡 */
-  transition: background 0.2s ease;
+  transition: background var(--wt-motion-fast) ease;
 }
 
 .wt-tree-node__row:hover {
@@ -134,7 +158,7 @@ const handleClick = () => {
   /* 字号 */
   font-size: 12px;
   /* 过渡 */
-  transition: transform 0.2s ease;
+  transition: transform var(--wt-motion-fast) ease;
 }
 
 .wt-tree-node__switcher.is-expanded {

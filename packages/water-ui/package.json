@@ -5,10 +5,10 @@
   "type": "module",
   "main": "./dist/water-ui.umd.cjs",
   "module": "./dist/water-ui.js",
-  "types": "./dist/index.d.ts",
+  "types": "./dist/types/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/types/index.d.ts",
       "import": "./src/index.ts",
       "require": "./dist/water-ui.umd.cjs"
     },
@@ -20,7 +20,8 @@
     "dist"
   ],
   "scripts": {
-    "build": "vite build && vite build -c vite.components.config.ts",
+    "build": "vite build && vite build -c vite.components.config.ts && pnpm run build:types",
+    "build:types": "vue-tsc -p tsconfig.build.json",
     "typecheck": "vue-tsc --noEmit",
     "lint": "echo 'no lint for components'",
     "test": "echo 'no test for components'"

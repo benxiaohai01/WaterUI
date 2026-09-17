@@ -20,12 +20,12 @@ const props = withDefaults(
   {
     span: 24,
     offset: 0,
-    xs: 24,
-    sm: 24,
-    md: 24,
-    lg: 24,
-    xl: 24,
-    xxl: 24
+    xs: undefined,
+    sm: undefined,
+    md: undefined,
+    lg: undefined,
+    xl: undefined,
+    xxl: undefined
   }
 )
 
@@ -34,12 +34,12 @@ const classes = computed(() => [
   'wt-col',
   `wt-col--${props.span}`,
   `wt-col--offset-${props.offset}`,
-  `wt-col-xs--${props.xs}`,
-  `wt-col-sm--${props.sm}`,
-  `wt-col-md--${props.md}`,
-  `wt-col-lg--${props.lg}`,
-  `wt-col-xl--${props.xl}`,
-  `wt-col-xxl--${props.xxl}`,
+  props.xs !== undefined ? `wt-col-xs--${props.xs}` : '',
+  props.sm !== undefined ? `wt-col-sm--${props.sm}` : '',
+  props.md !== undefined ? `wt-col-md--${props.md}` : '',
+  props.lg !== undefined ? `wt-col-lg--${props.lg}` : '',
+  props.xl !== undefined ? `wt-col-xl--${props.xl}` : '',
+  props.xxl !== undefined ? `wt-col-xxl--${props.xxl}` : '',
   props.customClass
 ])
 </script>
@@ -55,10 +55,10 @@ const classes = computed(() => [
   flex: 0 0 auto;
   /* 盒模型尺寸计算方式 */
   box-sizing: border-box;
-  /* 左侧内边距 */
-  padding-left: 6px;
-  /* 右侧内边距 */
-  padding-right: 6px;
+  /* 左侧内边距（与 Row 的 gutter 联动） */
+  padding-left: calc(var(--wt-row-gutter, 0px) / 2);
+  /* 右侧内边距（与 Row 的 gutter 联动） */
+  padding-right: calc(var(--wt-row-gutter, 0px) / 2);
   /* 最小宽度 */
   min-width: 0;
 }

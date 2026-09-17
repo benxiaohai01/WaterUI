@@ -16,8 +16,10 @@ export interface AnchorProps {
   defaultActive?: string
   /** 滚动容器 */
   container?: AnchorScrollContainer
-  /** 滚动偏移量（px） */
+  /** 滚动偏移量（px）：同时作为激活判定线与目标定位偏移 */
   offset?: number
+  /** 目标定位额外偏移（px）：用于预留固定/吸顶头部高度，默认 0 */
+  targetOffset?: number
   /** 是否监听点击事件自动高亮 */
   clickActive?: boolean
   /** 自定义类名 */

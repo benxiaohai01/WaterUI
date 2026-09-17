@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import type { UploadFile, UploadProps } from './props'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtUpload' })
@@ -23,6 +24,9 @@ const emit = defineEmits<{
 
 const inputRef = ref<HTMLInputElement>()
 
+/* 组件级高光参数（优先级高于全局配置） */
+const highlightStyle = useHighlightStyle(props)
+
 /* 派生状态（计算属性） */
 const classes = computed(() => [
   'wt-upload',
@@ -40,6 +44,8 @@ const handleFiles = (event: Event) => {
     size: file.size,
     status: 'ready'
   }))
+  /* 未选择任何文件时不派发多余的 change */
+  if (!files.length) return
   const next = props.multiple ? [...props.modelValue, ...files] : files
   emit('update:modelValue', next)
   emit('change', next)
@@ -48,6 +54,7 @@ const handleFiles = (event: Event) => {
 
 /* 交互处理逻辑 */
 const removeFile = (file: UploadFile, index: number) => {
+  if (props.disabled) return
   const next = props.modelValue.filter((_, itemIndex) => itemIndex !== index)
   emit('update:modelValue', next)
   emit('remove', file, index)
@@ -56,12 +63,12 @@ const removeFile = (file: UploadFile, index: number) => {
 /* 交互处理逻辑 */
 const formatSize = (size?: number) => {
   if (!size) return ''
-  return size > 1024 * 1024 ? `${(size / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(size / 1024))} KB`
+  return size >= 1024 * 1024 ? `${(size / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(size / 1024))} KB`
 }
 </script>
 
 <template>
-  <div :class="classes">
+  <div :class="classes" :style="highlightStyle">
     <label class="wt-upload__trigger">
       <input
         ref="inputRef"
@@ -79,19 +86,21 @@ const formatSize = (size?: number) => {
       <li v-for="(file, index) in modelValue" :key="`${file.name}-${index}`" class="wt-upload__item">
         <span class="wt-upload__name">{{ file.name }}</span>
         <span v-if="file.size" class="wt-upload__size">{{ formatSize(file.size) }}</span>
-        <button type="button" aria-label="移除文件" @click="removeFile(file, index)">×</button>
+        <button type="button" aria-label="移除文件" :disabled="disabled" @click="removeFile(file, index)">×</button>
       </li>
     </ul>
   </div>
 </template>
 <style scoped lang="scss">
+@use '@water-ui/theme/src/mixins/index.scss' as wt;
+
 .wt-upload {
-  /* 高光尺寸 */
-  --wt-highlight-size: min(var(--wt-highlight-size-base), 11px);
-  /* 次高光尺寸 */
-  --wt-highlight-small-size: min(calc(var(--wt-highlight-size-base) * 0.5), 6px);
-  /* 高光内边距 */
-  --wt-highlight-inset: min(var(--wt-highlight-offset), 6px);
+  /* 高光尺寸（随全局基准等比缩放） */
+  --wt-highlight-size: calc(var(--wt-highlight-size-base) * 0.9167);
+  /* 次高光尺寸（随全局基准等比缩放） */
+  --wt-highlight-small-size: calc(var(--wt-highlight-size-base) * 0.5);
+  /* 高光内边距（随全局偏移等比缩放） */
+  --wt-highlight-inset: calc(var(--wt-highlight-offset) * 0.75);
   /* 定位方式 */
   position: relative;
   /* 创建独立层叠上下文，隔离内部元素 */
@@ -103,10 +112,8 @@ const formatSize = (size?: number) => {
 }
 
 .wt-upload__trigger {
-  /* 定位方式 */
-  position: relative;
-  /* 创建独立层叠上下文，隔离内部元素 */
-  isolation: isolate;
+  /* 水滴高光：定位方式 + 独立层叠上下文 + 主/次高光伪元素（层叠层级 2） */
+  @include wt.wt-liquid-highlights(2);
   /* 溢出裁剪方式 */
   overflow: hidden;
   /* 盒模型显示方式 */
@@ -141,56 +148,6 @@ const formatSize = (size?: number) => {
   cursor: pointer;
   /* 动画 */
   animation: wt-liquid-flow-subtle var(--wt-motion-slow) ease-in-out infinite;
-}
-
-.wt-upload__trigger::after,
-.wt-upload__trigger::before {
-  /* 伪元素内容 */
-  content: '';
-  /* 定位方式 */
-  position: absolute;
-  /* 是否响应鼠标事件 */
-  pointer-events: none;
-  /* 层叠层级 */
-  z-index: 2;
-}
-
-.wt-upload__trigger::after {
-  /* 宽度 */
-  width: var(--wt-highlight-size);
-  /* 高度 */
-  height: var(--wt-highlight-size);
-  /* 顶部偏移 */
-  top: var(--wt-highlight-top);
-  /* 右侧偏移 */
-  right: var(--wt-highlight-right);
-  /* 背景 */
-  background: var(--wt-highlight);
-  /* 圆角，塑造水滴/液体轮廓 */
-  border-radius: var(--wt-highlight-radius);
-  /* 动画 */
-  animation: wt-highlight-float var(--wt-motion-normal) ease-in-out infinite;
-  /* 透明度 */
-  opacity: var(--wt-highlight-opacity);
-}
-
-.wt-upload__trigger::before {
-  /* 宽度 */
-  width: var(--wt-highlight-small-size);
-  /* 高度 */
-  height: var(--wt-highlight-small-size);
-  /* 顶部偏移 */
-  top: var(--wt-highlight-small-top);
-  /* 右侧偏移 */
-  right: var(--wt-highlight-small-right);
-  /* 背景 */
-  background: var(--wt-highlight-small);
-  /* 圆角，塑造水滴/液体轮廓 */
-  border-radius: var(--wt-highlight-small-radius);
-  /* 动画 */
-  animation: wt-highlight-float-small var(--wt-motion-slow) ease-in-out infinite;
-  /* 透明度 */
-  opacity: var(--wt-highlight-small-opacity);
 }
 
 .wt-upload__input {

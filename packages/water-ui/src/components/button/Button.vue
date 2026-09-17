@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import type { ButtonProps } from './props'
 import { resolveSize } from '../config-provider/context'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtButton' })
@@ -25,6 +26,9 @@ const emit = defineEmits<{
 /* 解析组件尺寸配置 */
 const size = resolveSize(() => props.size)
 
+/* 组件级高光参数：显式传入时覆盖全局配置（props.ts 为类型专用导入，改动后需重编译本文件） */
+const highlightStyle = useHighlightStyle(props)
+
 /* 交互处理逻辑 */
 const createRipple = (event: MouseEvent) => {
   if (props.disabled || props.loading) return
@@ -41,20 +45,27 @@ const createRipple = (event: MouseEvent) => {
     'rgba(255, 255, 255, 0.38)'
   const opacity = Number(styles.getPropertyValue('--wt-ripple-opacity').trim() || '0.45')
   const scale = Number(styles.getPropertyValue('--wt-ripple-scale').trim() || '9')
+  const rawSize = styles.getPropertyValue('--wt-ripple-size').trim() || '20px'
+  const parsedSize = Number.parseFloat(rawSize)
+  const size = Number.isFinite(parsedSize) && parsedSize > 0 ? parsedSize : 20
   const rawDuration = styles.getPropertyValue('--wt-ripple-duration').trim() || '600ms'
   const duration = rawDuration.endsWith('ms')
     ? Number(rawDuration.slice(0, -2))
     : Number(rawDuration)
   const safeDuration = Number.isFinite(duration) && duration > 0 ? duration : 600
 
+  /* 键盘触发的 click 事件坐标为 (0,0)，改为从按钮中心扩散 */
+  const originX = event.detail === 0 ? rect.width / 2 : event.clientX - rect.left
+  const originY = event.detail === 0 ? rect.height / 2 : event.clientY - rect.top
+
   ripple.style.cssText = `
 
     position: absolute;
     z-index: 3;
-    left: ${event.clientX - rect.left}px;
-    top: ${event.clientY - rect.top}px;
-    width: 20px;
-    height: 20px;
+    left: ${originX}px;
+    top: ${originY}px;
+    width: ${size}px;
+    height: ${size}px;
     border-radius: 50%;
     pointer-events: none;
     background: ${color};
@@ -118,7 +129,7 @@ const classes = computed(() => [
     :type="nativeType"
     :class="classes"
     :disabled="disabled || loading"
-    :style="customStyle"
+    :style="[highlightStyle, customStyle]"
     :aria-busy="loading"
     @click="handleClick"
   >
@@ -132,17 +143,17 @@ const classes = computed(() => [
   </button>
 </template>
 <style scoped lang="scss">
+@use '@water-ui/theme/src/mixins/index.scss' as wt;
+
 .wt-button {
-  /* 定位方式 */
-  position: relative;
-  /* 创建独立层叠上下文，隔离内部元素 */
-  isolation: isolate;
-  /* 高光尺寸 */
-  --wt-highlight-size: min(var(--wt-highlight-size-base), 11px);
+  /* 水滴高光：定位方式 + 独立层叠上下文 + 主/次高光伪元素（层叠层级 2） */
+  @include wt.wt-liquid-highlights(2);
+  /* 高光尺寸（随全局基准等比缩放） */
+  --wt-highlight-size: calc(var(--wt-highlight-size-base) * 0.9167);
   /* 次高光尺寸 */
-  --wt-highlight-small-size: min(calc(var(--wt-highlight-size-base) * 0.5), 6px);
-  /* 高光内边距 */
-  --wt-highlight-inset: min(var(--wt-highlight-offset), 6px);
+  --wt-highlight-small-size: calc(var(--wt-highlight-size-base) * 0.5);
+  /* 高光内边距（随全局偏移等比缩放） */
+  --wt-highlight-inset: calc(var(--wt-highlight-offset) * 0.75);
   /* 溢出裁剪方式 */
   overflow: hidden;
   /* 盒模型显示方式 */
@@ -167,91 +178,23 @@ const classes = computed(() => [
   color: var(--wt-text);
   /* 圆角，塑造水滴/液体轮廓 */
   border-radius: var(--wt-radius-md);
-  /* 背景 */
-  background: linear-gradient(
-    145deg,
-    rgba(0, 0, 0, var(--wt-shadow-dark-alpha)),
-    rgba(0, 0, 0, var(--wt-shadow-dark-alpha-strong))
-  );
-  /* 水滴内外部阴影层次 */
-  box-shadow:
-    inset 3px 4px 8px rgba(0, 0, 0, 0.15),
-    inset -2px -2px 5px var(--wt-shadow-light),
-    3px 4px 12px rgba(0, 0, 0, 0.1),
-    0 1px 4px rgba(0, 0, 0, 0.06);
-  /* 文本阴影 */
-  text-shadow: var(--wt-text-shadow);
-  /* 动画 */
-  animation: wt-liquid-flow var(--wt-motion-normal) ease-in-out infinite;
-  /* 动画性能提示 */
-  will-change: border-radius;
+  /* 水滴表面：背景渐变 + 内外阴影层次 + 文本阴影 */
+  @include wt.wt-liquid-surface;
+  /* 液体形变动画（含 will-change: border-radius） */
+  @include wt.wt-liquid-animation(wt-liquid-flow, var(--wt-motion-normal), border-radius);
   /* 过渡动画 */
   transition:
-    transform 0.2s ease,
-    box-shadow 0.25s ease,
-    background 0.25s ease,
-    border-radius 0.4s ease,
-    color 0.2s ease;
+    transform var(--wt-motion-fast) ease,
+    box-shadow var(--wt-motion-fast) ease,
+    background var(--wt-motion-fast) ease,
+    border-radius var(--wt-motion-base) ease,
+    color var(--wt-motion-fast) ease;
   /* 焦点轮廓 */
   outline: none;
   /* 文本选中行为 */
   user-select: none;
   /* 移动端点击高亮颜色 */
   -webkit-tap-highlight-color: transparent;
-}
-
-.wt-button::after {
-  /* 伪元素内容 */
-  content: '';
-  /* 定位方式 */
-  position: absolute;
-  /* 宽度 */
-  width: var(--wt-highlight-size);
-  /* 高度 */
-  height: var(--wt-highlight-size);
-  /* 顶部偏移 */
-  top: var(--wt-highlight-top);
-  /* 右侧偏移 */
-  right: var(--wt-highlight-right);
-  /* 背景 */
-  background: var(--wt-highlight);
-  /* 圆角，塑造水滴/液体轮廓 */
-  border-radius: var(--wt-highlight-radius);
-  /* 是否响应鼠标事件 */
-  pointer-events: none;
-  /* 动画 */
-  animation: wt-highlight-float var(--wt-motion-normal) ease-in-out infinite;
-  /* 透明度 */
-  opacity: var(--wt-highlight-opacity);
-  /* 层叠层级 */
-  z-index: 2;
-}
-
-.wt-button::before {
-  /* 伪元素内容 */
-  content: '';
-  /* 定位方式 */
-  position: absolute;
-  /* 宽度 */
-  width: var(--wt-highlight-small-size);
-  /* 高度 */
-  height: var(--wt-highlight-small-size);
-  /* 顶部偏移 */
-  top: var(--wt-highlight-small-top);
-  /* 右侧偏移 */
-  right: var(--wt-highlight-small-right);
-  /* 背景 */
-  background: var(--wt-highlight-small);
-  /* 圆角，塑造水滴/液体轮廓 */
-  border-radius: var(--wt-highlight-small-radius);
-  /* 是否响应鼠标事件 */
-  pointer-events: none;
-  /* 动画 */
-  animation: wt-highlight-float-small var(--wt-motion-slow) ease-in-out infinite;
-  /* 透明度 */
-  opacity: var(--wt-highlight-small-opacity);
-  /* 层叠层级 */
-  z-index: 2;
 }
 
 .wt-button:hover:not(:disabled) {
@@ -367,6 +310,48 @@ const classes = computed(() => [
 .wt-button.is-round {
   /* 圆角，塑造水滴/液体轮廓 */
   border-radius: 999px;
+}
+
+/* 朴素态：降低阴影与高光，突出描边与语义色 */
+.wt-button.is-plain {
+  /* 背景 */
+  background: var(--wt-surface);
+  /* 水滴内外部阴影层次 */
+  box-shadow:
+    inset 2px 3px 6px rgba(0, 0, 0, var(--wt-shadow-dark-alpha)),
+    inset -2px -2px 5px var(--wt-shadow-light),
+    2px 3px 10px rgba(0, 0, 0, 0.08);
+}
+
+.wt-button.is-plain::before,
+.wt-button.is-plain::after {
+  /* 透明度 */
+  opacity: 0.35;
+}
+
+.wt-button--primary.is-plain {
+  /* 文本颜色 */
+  color: var(--wt-primary);
+}
+
+.wt-button--success.is-plain {
+  /* 文本颜色 */
+  color: var(--wt-success);
+}
+
+.wt-button--warning.is-plain {
+  /* 文本颜色 */
+  color: var(--wt-warning);
+}
+
+.wt-button--danger.is-plain {
+  /* 文本颜色 */
+  color: var(--wt-danger);
+}
+
+.wt-button--info.is-plain {
+  /* 文本颜色 */
+  color: var(--wt-info);
 }
 
 .wt-button.is-block {

@@ -1,3 +1,5 @@
+import type { HighlightProps } from '../../utils/highlight'
+
 export type DropdownTrigger = 'hover' | 'click'
 export type DropdownPlacement = 'top' | 'right' | 'bottom' | 'left'
 
@@ -12,7 +14,7 @@ export interface DropdownItemProps {
   customClass?: string
 }
 
-export interface DropdownMenuProps {
+export interface DropdownMenuProps extends HighlightProps {
   /** 自定义类名 */
   customClass?: string
 }

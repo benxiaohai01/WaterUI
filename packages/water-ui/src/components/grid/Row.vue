@@ -27,6 +27,7 @@ const style = computed(() => {
   const horizontal = Array.isArray(props.gutter) ? props.gutter[0] : props.gutter
   const vertical = Array.isArray(props.gutter) ? props.gutter[1] : props.gutter
   return {
+    '--wt-row-gutter': horizontal ? `${horizontal}px` : '0px',
     marginLeft: horizontal ? `-${horizontal / 2}px` : undefined,
     marginRight: horizontal ? `-${horizontal / 2}px` : undefined,
     rowGap: vertical ? `${vertical}px` : undefined
@@ -47,10 +48,13 @@ const style = computed(() => {
 .wt-row {
   /* 盒模型显示方式 */
   display: flex;
-  /* 弹性项是否换行 */
-  flex-wrap: wrap;
   /* 最小宽度 */
   min-width: 0;
+}
+
+.wt-row.is-wrap {
+  /* 弹性项是否换行 */
+  flex-wrap: wrap;
 }
 
 .wt-row--start {

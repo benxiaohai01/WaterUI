@@ -99,11 +99,18 @@ font-style: italic;
 display: block;
 }
 .wt-text.is-truncate {
-/* 溢出裁剪方式 */
-overflow: hidden;
+  /* 盒模型显示方式：inline 元素无法截断，转为行内块 */
+  display: inline-block;
+  /* 溢出裁剪方式 */
+  overflow: hidden;
   /* 空白与换行处理 */
   white-space: nowrap;
   /* 文本溢出省略方式 */
   text-overflow: ellipsis;
+}
+
+.wt-text.is-truncate.is-block {
+  /* 盒模型显示方式：block 场景保持整行截断 */
+  display: block;
 }
 </style>

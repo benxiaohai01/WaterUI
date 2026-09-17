@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { ProgressProps, ProgressStatus } from './props'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtProgress' })
@@ -16,7 +17,7 @@ const props = withDefaults(defineProps<ProgressProps>(), {
   customClass: ''
 })
 
-/* 状态 → 语义色映射 */
+/* 状态 → 语义色映射（同时用于进度条颜色与辉光混色） */
 const statusColor: Record<ProgressStatus, string> = {
   normal: 'var(--wt-primary)',
   success: 'var(--wt-success)',
@@ -24,18 +25,30 @@ const statusColor: Record<ProgressStatus, string> = {
   danger: 'var(--wt-danger)'
 }
 
-/* 进度数值钳制在 0-100 */
-const clamped = computed(() => Math.min(100, Math.max(0, props.percentage)))
+/* 组件级高光参数（优先级高于全局配置） */
+const highlightStyle = useHighlightStyle(props)
+
+/* 进度数值钳制在 0-100（无效值退化为 0） */
+const clamped = computed(() => {
+  const raw = Number(props.percentage)
+  if (!Number.isFinite(raw)) return 0
+  return Math.min(100, Math.max(0, raw))
+})
 /* 当前状态色 */
 const color = computed(() => statusColor[props.status])
-/* 圆形进度：周长与弧长 */
+/* 圆形进度：半径、中心点与 viewBox（与 size 同步，避免裁切或缩放） */
 const radius = computed(() => (props.size - props.strokeWidth) / 2)
+const center = computed(() => props.size / 2)
+const viewBox = computed(() => `0 0 ${props.size} ${props.size}`)
 const circumference = computed(() => 2 * Math.PI * radius.value)
 const arcOffset = computed(() => circumference.value * (1 - clamped.value / 100))
 </script>
 
 <template>
-  <div :class="['wt-progress', `wt-progress--${type}`, props.customClass]">
+  <div
+    :class="['wt-progress', `wt-progress--${type}`, props.customClass]"
+    :style="[highlightStyle, { '--wt-progress-status-color': color }]"
+  >
     <div v-if="type === 'line'" class="wt-progress__line">
       <div
         class="wt-progress__bar"
@@ -48,18 +61,18 @@ const arcOffset = computed(() => circumference.value * (1 - clamped.value / 100)
       <span v-if="showText" class="wt-progress__text">{{ clamped }}%</span>
     </div>
     <div v-else class="wt-progress__circle">
-      <svg :width="size" :height="size" viewBox="0 0 96 96">
+      <svg :width="size" :height="size" :viewBox="viewBox">
         <circle
-          cx="48"
-          cy="48"
+          :cx="center"
+          :cy="center"
           :r="radius"
           fill="none"
           stroke="color-mix(in srgb, var(--wt-text-secondary) 12%, transparent)"
           :stroke-width="strokeWidth"
         />
         <circle
-          cx="48"
-          cy="48"
+          :cx="center"
+          :cy="center"
           :r="radius"
           fill="none"
           :stroke="color"
@@ -67,7 +80,7 @@ const arcOffset = computed(() => circumference.value * (1 - clamped.value / 100)
           stroke-linecap="round"
           :stroke-dasharray="circumference"
           :stroke-dashoffset="arcOffset"
-          transform="rotate(-90 48 48)"
+          :transform="`rotate(-90 ${center} ${center})`"
         />
       </svg>
       <span v-if="showText" class="wt-progress__circle-text">{{ clamped }}%</span>
@@ -90,12 +103,12 @@ const arcOffset = computed(() => circumference.value * (1 - clamped.value / 100)
 .wt-progress__bar {
   /* 圆角，塑造水滴/液体轮廓 */
   border-radius: var(--wt-radius-xs);
-  /* 水滴内外部阴影层次 */
+  /* 水滴内外部阴影层次（辉光随状态色变化） */
   box-shadow:
     inset 1px 2px 4px rgba(0, 0, 0, 0.12),
-    0 2px 6px color-mix(in srgb, var(--wt-primary) 24%, transparent);
+    0 2px 6px color-mix(in srgb, var(--wt-progress-status-color) 24%, transparent);
   /* 过渡 */
-  transition: width 0.4s ease;
+  transition: width var(--wt-motion-base) ease;
 }
 
 .wt-progress__text {

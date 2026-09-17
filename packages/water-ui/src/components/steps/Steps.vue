@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, reactive, watch } from 'vue'
+import { computed, onBeforeUnmount, reactive } from 'vue'
 import type { StepsProps } from './props'
 import { provideSteps } from './context'
 
@@ -56,15 +56,12 @@ provideSteps({
     const index = steps.indexOf(step)
     if (index !== -1) steps.splice(index, 1)
   },
+  indexOf: (step) => steps.indexOf(step),
   onSelect: (index) => {
     emit('select', index)
     emit('update:active', index)
   }
 })
-
-/* 响应式状态：当前激活值（供状态推导的依赖追踪） */
-const activeState = computed(() => props.active)
-watch(activeState, () => undefined)
 
 /* 派生状态：容器类名 */
 const classes = computed(() => [

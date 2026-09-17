@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import type { PopconfirmProps } from './props'
 import { WtIcon } from '../icon'
 import { WtButton } from '../button'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtPopconfirm' })
@@ -20,12 +21,28 @@ const props = withDefaults(defineProps<PopconfirmProps>(), {
 
 /* 声明组件事件 */
 const emit = defineEmits<{
+  'update:visible': [value: boolean]
   confirm: []
   cancel: []
 }>()
 
-/* 响应式状态：气泡确认的可见性 */
-const visible = ref(false)
+/* 响应式状态：气泡确认的内部可见性（visible 未受控时兜底） */
+const innerVisible = ref(false)
+
+/* 响应式状态：根节点引用（用于判定点击是否在外部） */
+const rootRef = ref<HTMLElement>()
+
+/* 组件级高光参数（优先级高于全局配置）；高光渲染在气泡面板上，故绑定到面板元素 */
+const highlightStyle = useHighlightStyle(props)
+
+/* 派生状态：气泡确认的可见性（受控优先，兼作读写入口） */
+const visible = computed({
+  get: () => props.visible ?? innerVisible.value,
+  set: (value: boolean) => {
+    innerVisible.value = value
+    emit('update:visible', value)
+  }
+})
 
 /* 派生状态：图标名称 */
 const iconName = computed(() => {
@@ -39,26 +56,59 @@ const iconName = computed(() => {
   }
 })
 
+/* 交互处理逻辑：关闭气泡（Esc 与点击外部仅收起，不触发确认/取消） */
+const hide = () => {
+  visible.value = false
+}
+
 /* 交互处理逻辑：确认操作 */
 const handleConfirm = () => {
-  visible.value = false
+  hide()
   emit('confirm')
 }
 
 /* 交互处理逻辑：取消操作 */
 const handleCancel = () => {
-  visible.value = false
+  hide()
   emit('cancel')
 }
+
+/* 交互处理逻辑：Esc 关闭气泡 */
+const handleKeydown = (event: KeyboardEvent) => {
+  if (event.key === 'Escape') hide()
+}
+
+/* 交互处理逻辑：点击外部关闭气泡 */
+const handleOutside = (event: PointerEvent) => {
+  if (rootRef.value && !rootRef.value.contains(event.target as Node)) hide()
+}
+
+/* 生命周期：仅在展开时注册全局监听，关闭时移除 */
+watch(visible, (value) => {
+  if (typeof document === 'undefined') return
+  if (value) {
+    document.addEventListener('keydown', handleKeydown)
+    document.addEventListener('pointerdown', handleOutside)
+  } else {
+    document.removeEventListener('keydown', handleKeydown)
+    document.removeEventListener('pointerdown', handleOutside)
+  }
+})
+
+/* 生命周期：卸载时移除全局监听 */
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', handleKeydown)
+  document.removeEventListener('pointerdown', handleOutside)
+})
 </script>
 
 <template>
-  <span class="wt-popconfirm">
+  <span ref="rootRef" class="wt-popconfirm">
     <span class="wt-popconfirm__trigger" @click="visible = !visible">
       <slot />
     </span>
     <Transition name="wt-popconfirm">
-      <section v-if="visible" class="wt-popconfirm__panel" :class="[`is-${placement}`, customClass]" role="dialog">
+      <section v-if="visible" class="wt-popconfirm__panel" :class="[`is-${placement}`, customClass]" :style="highlightStyle" role="dialog">
         <span class="wt-popconfirm__icon" :class="`is-${type}`" aria-hidden="true">
           <wt-icon :name="iconName" :size="16" />
         </span>
@@ -93,6 +143,12 @@ const handleCancel = () => {
 }
 
 .wt-popconfirm__panel {
+  /* 高光尺寸（随全局基准等比缩放） */
+  --wt-highlight-size: calc(var(--wt-highlight-size-base) * 1.0000);
+  /* 次高光尺寸 */
+  --wt-highlight-small-size: calc(var(--wt-highlight-size-base) * 0.5);
+  /* 高光内边距（随全局偏移等比缩放） */
+  --wt-highlight-inset: calc(var(--wt-highlight-offset) * 1.0000);
   /* 定位方式 */
   position: absolute;
   /* 层叠层级 */
@@ -130,9 +186,9 @@ const handleCancel = () => {
   /* 高度 */
   height: var(--wt-highlight-small-size);
   /* 顶部偏移 */
-  top: var(--wt-highlight-small-top);
+  top: min(calc(var(--wt-highlight-inset) + var(--wt-highlight-size) + var(--wt-highlight-group-gap)), calc(100% - var(--wt-highlight-small-size) - 4px));
   /* 右侧偏移 */
-  right: var(--wt-highlight-small-right);
+  right: min(calc(var(--wt-highlight-inset) + var(--wt-highlight-size) + var(--wt-highlight-group-gap)), calc(100% - var(--wt-highlight-small-size) - 4px));
   /* 背景 */
   background: var(--wt-highlight-small);
   /* 圆角，塑造水滴/液体轮廓 */
@@ -233,14 +289,50 @@ const handleCancel = () => {
 .wt-popconfirm-enter-active,
 .wt-popconfirm-leave-active {
   /* 过渡动画 */
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition:
+    opacity var(--wt-motion-fast) ease,
+    transform var(--wt-motion-fast) ease,
+    visibility var(--wt-motion-fast);
 }
 
-.wt-popconfirm-enter-from,
-.wt-popconfirm-leave-to {
+/* 入场起点与离场终点：按弹出方向给出正确的形变方向与隐藏态 */
+.wt-popconfirm__panel.is-top.wt-popconfirm-enter-from,
+.wt-popconfirm__panel.is-top.wt-popconfirm-leave-to {
   /* 透明度 */
   opacity: 0;
-  /* 形变 */
+  /* 可见性：过渡结束态不可聚焦 */
+  visibility: hidden;
+  /* 形变：位于触发元素上方 */
   transform: translate(-50%, 6px) scale(0.96);
+}
+
+.wt-popconfirm__panel.is-bottom.wt-popconfirm-enter-from,
+.wt-popconfirm__panel.is-bottom.wt-popconfirm-leave-to {
+  /* 透明度 */
+  opacity: 0;
+  /* 可见性：过渡结束态不可聚焦 */
+  visibility: hidden;
+  /* 形变：位于触发元素下方 */
+  transform: translate(-50%, -6px) scale(0.96);
+}
+
+.wt-popconfirm__panel.is-left.wt-popconfirm-enter-from,
+.wt-popconfirm__panel.is-left.wt-popconfirm-leave-to {
+  /* 透明度 */
+  opacity: 0;
+  /* 可见性：过渡结束态不可聚焦 */
+  visibility: hidden;
+  /* 形变：位于触发元素左侧 */
+  transform: translate(6px, -50%) scale(0.96);
+}
+
+.wt-popconfirm__panel.is-right.wt-popconfirm-enter-from,
+.wt-popconfirm__panel.is-right.wt-popconfirm-leave-to {
+  /* 透明度 */
+  opacity: 0;
+  /* 可见性：过渡结束态不可聚焦 */
+  visibility: hidden;
+  /* 形变：位于触发元素右侧 */
+  transform: translate(-6px, -50%) scale(0.96);
 }
 </style>

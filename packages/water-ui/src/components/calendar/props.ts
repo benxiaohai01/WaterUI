@@ -1,4 +1,6 @@
-export interface CalendarProps {
+import type { HighlightProps } from '../../utils/highlight'
+
+export interface CalendarProps extends HighlightProps {
   /** 当前选中日期（YYYY-MM-DD） */
   modelValue?: string
   /** 默认年份 */

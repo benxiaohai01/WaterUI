@@ -1,3 +1,10 @@
+<script lang="ts">
+/* 模块级引用计数：多个预览实例共享 body 滚动锁，避免互相提前解锁 */
+let bodyLockCount = 0
+/* 首次加锁时保存的 body 溢出原值 */
+let originalBodyOverflow = ''
+</script>
+
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { ImageViewerProps } from './props'
@@ -30,18 +37,45 @@ const scale = ref(1)
 const rotate = ref(0)
 const index = ref(0)
 
+/* 打开预览前的焦点元素，关闭后归还焦点 */
+let lastActiveElement: HTMLElement | null = null
+
+/* 当前实例是否持有 body 滚动锁（保证加锁/解锁成对） */
+let bodyLocked = false
+
 /* 派生状态：当前图片 */
 const currentImage = computed(() => props.imageList[index.value])
 
 /* 派生状态：图片变换样式 */
 const imageStyle = computed(() => ({
   transform: `scale(${scale.value}) rotate(${rotate.value}deg)`,
-  transition: 'transform 0.25s ease'
+  transition: 'transform var(--wt-motion-fast) ease'
 }))
 
 /* 派生状态：是否可切换上/下一张 */
 const canPrev = computed(() => index.value > 0)
 const canNext = computed(() => index.value < props.imageList.length - 1)
+
+/* 交互处理逻辑：把索引收敛到合法范围 */
+const clampIndex = (value: number) =>
+  Math.min(Math.max(value, 0), Math.max(props.imageList.length - 1, 0))
+
+/* 交互处理逻辑：锁定 body 滚动（引用计数，首次锁定时记录原值） */
+const lockBodyScroll = () => {
+  if (bodyLocked) return
+  bodyLocked = true
+  if (bodyLockCount === 0) originalBodyOverflow = document.body.style.overflow
+  bodyLockCount += 1
+  document.body.style.overflow = 'hidden'
+}
+
+/* 交互处理逻辑：解除 body 滚动锁（计数归零时还原原值） */
+const unlockBodyScroll = () => {
+  if (!bodyLocked) return
+  bodyLocked = false
+  bodyLockCount = Math.max(0, bodyLockCount - 1)
+  if (bodyLockCount === 0) document.body.style.overflow = originalBodyOverflow
+}
 
 /* 重置视图 */
 const reset = () => {
@@ -108,8 +142,15 @@ watch(
   () => props.modelValue,
   (value) => {
     if (value) {
-      index.value = Math.min(Math.max(props.current, 0), Math.max(props.imageList.length - 1, 0))
+      index.value = clampIndex(props.current)
       reset()
+      lastActiveElement = document.activeElement as HTMLElement | null
+      lockBodyScroll()
+    } else {
+      unlockBodyScroll()
+      /* 关闭后把焦点归还给触发元素 */
+      lastActiveElement?.focus()
+      lastActiveElement = null
     }
   }
 )
@@ -117,12 +158,30 @@ watch(
 watch(
   () => props.current,
   (value) => {
-    if (value !== index.value) index.value = value
+    const clamped = clampIndex(value)
+    index.value = clamped
+    /* 外部传入越界索引时纠正并回传 */
+    if (clamped !== value) emit('update:current', clamped)
+  }
+)
+
+watch(
+  () => props.imageList.length,
+  () => {
+    const clamped = clampIndex(index.value)
+    if (clamped === index.value) return
+    index.value = clamped
+    emit('update:current', clamped)
+    emit('change', clamped)
   }
 )
 
 onMounted(() => document.addEventListener('keydown', handleKeydown))
-onBeforeUnmount(() => document.removeEventListener('keydown', handleKeydown))
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', handleKeydown)
+  /* 卸载时解除滚动锁，避免残留锁定 */
+  unlockBodyScroll()
+})
 </script>
 
 <template>
@@ -183,8 +242,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleKeydown))
           <button type="button" title="右旋转" aria-label="右旋转" @click="rotateRight">
             <wt-icon name="refresh-right" :size="16" />
           </button>
-          <button v-if="props.imageList.length > 1" type="button" title="重置" aria-label="重置" @click="reset">
-            <wt-icon name="fullscreen" :size="16" />
+          <button type="button" title="重置" aria-label="重置" @click="reset">
+            <wt-icon name="refresh-left" :size="16" />
           </button>
         </div>
 
@@ -287,7 +346,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleKeydown))
   /* 主轴内容分配方式 */
   justify-content: center;
   /* 过渡 */
-  transition: background 0.2s ease, transform 0.2s ease;
+  transition: background var(--wt-motion-fast) ease, transform var(--wt-motion-fast) ease;
 }
 
 .wt-image-viewer__close:hover {
@@ -325,7 +384,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleKeydown))
   /* 主轴内容分配方式 */
   justify-content: center;
   /* 过渡 */
-  transition: background 0.2s ease;
+  transition: background var(--wt-motion-fast) ease;
 }
 
 .wt-image-viewer__arrow:hover {
@@ -390,7 +449,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleKeydown))
   /* 主轴内容分配方式 */
   justify-content: center;
   /* 过渡 */
-  transition: background 0.2s ease;
+  transition: background var(--wt-motion-fast) ease;
 }
 
 .wt-image-viewer__toolbar button:hover {
@@ -427,7 +486,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleKeydown))
 .wt-image-viewer-enter-active,
 .wt-image-viewer-leave-active {
   /* 过渡动画 */
-  transition: opacity 0.25s ease;
+  transition: opacity var(--wt-motion-fast) ease;
 }
 
 .wt-image-viewer-enter-from,

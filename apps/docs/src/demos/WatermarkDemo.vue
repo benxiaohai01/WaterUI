@@ -1,6 +1,6 @@
 <template>
   <div class="watermark-demo">
-    <wt-watermark text="Water UI\n机密文件" :font-size="15" :opacity="0.12">
+    <wt-watermark :text="'Water UI\n机密文件'" :font-size="15" :opacity="0.12">
       <div class="watermark-content">
         <p>这是一段受水印保护的内容区域。</p>
         <p>水印以 SVG 平铺，文字或图片均可，不会影响内容交互。</p>

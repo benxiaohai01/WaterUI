@@ -1,8 +1,9 @@
 import type { MessageType } from '../message/props'
+import type { HighlightProps } from '../../utils/highlight'
 
 export type { MessageType as NotificationType }
 
-export interface NotificationProps {
+export interface NotificationProps extends HighlightProps {
   title?: string
   message?: string
   type?: MessageType
@@ -12,7 +13,7 @@ export interface NotificationProps {
   customClass?: string
 }
 
-export interface NotificationOptions {
+export interface NotificationOptions extends HighlightProps {
   title?: string
   message: string
   type?: MessageType

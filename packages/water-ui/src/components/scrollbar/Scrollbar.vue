@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import type { ScrollbarProps } from './props'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtScrollbar' })
@@ -15,6 +16,9 @@ const props = withDefaults(defineProps<ScrollbarProps>(), {
 /* 组件实例引用 */
 const wrapRef = ref<HTMLElement>()
 const thumbRef = ref<HTMLElement>()
+
+/* 组件级高光参数（优先级高于全局配置） */
+const highlightStyle = useHighlightStyle(props)
 
 /* 响应式状态：轨道可见性与滑块偏移 */
 const trackVisible = ref(false)
@@ -36,14 +40,16 @@ const wrapStyle = computed(() => {
 /* 滑块高度：按内容比例计算，且不小于最小长度 */const calcThumb = () => {
   const el = wrapRef.value
   if (!el) return
-  const { clientHeight, scrollHeight } = el
-  if (scrollHeight <= clientHeight) {
+  const { clientHeight, scrollHeight, scrollTop } = el
+  const maxScroll = scrollHeight - clientHeight
+  if (maxScroll <= 0) {
     trackVisible.value = false
     return
   }
   const ratio = clientHeight / scrollHeight
   thumbHeight.value = Math.max(clientHeight * ratio, props.minThumbSize)
-  thumbTop.value = (el.scrollTop / scrollHeight) * clientHeight
+  const maxTop = Math.max(clientHeight - thumbHeight.value, 0)
+  thumbTop.value = maxTop > 0 ? (scrollTop / maxScroll) * maxTop : 0
   trackVisible.value = true
 }
 
@@ -52,8 +58,10 @@ const handleScroll = () => {
   const el = wrapRef.value
   if (!el) return
   const { clientHeight, scrollHeight, scrollTop } = el
-  if (scrollHeight <= clientHeight) return
-  thumbTop.value = (scrollTop / scrollHeight) * clientHeight
+  const maxScroll = scrollHeight - clientHeight
+  if (maxScroll <= 0) return
+  const maxTop = Math.max(clientHeight - thumbHeight.value, 0)
+  thumbTop.value = maxTop > 0 ? (scrollTop / maxScroll) * maxTop : 0
 }
 
 /* 滑块拖拽 */
@@ -74,10 +82,12 @@ const handleThumbMove = (event: MouseEvent) => {
   const el = wrapRef.value
   if (!el || !dragging.value) return
   const { clientHeight, scrollHeight } = el
-  const maxTop = clientHeight - thumbHeight.value
-  const delta = ((event.clientY - dragStartY) / clientHeight) * scrollHeight
-  const nextTop = Math.min(Math.max(dragStartTop + delta, 0), maxTop)
-  el.scrollTop = (nextTop / clientHeight) * scrollHeight
+  const maxScroll = scrollHeight - clientHeight
+  const maxTop = Math.max(clientHeight - thumbHeight.value, 0)
+  if (maxTop <= 0) return
+  /* 鼠标位移与滑块位移 1:1，再按比例映射回滚动距离 */
+  const nextTop = Math.min(Math.max(dragStartTop + (event.clientY - dragStartY), 0), maxTop)
+  el.scrollTop = (nextTop / maxTop) * maxScroll
 }
 
 const handleThumbUp = () => {
@@ -86,17 +96,20 @@ const handleThumbUp = () => {
   window.removeEventListener('mouseup', handleThumbUp)
 }
 
-/* 内容变化时重算滑块 */
-watch(
-  () => props.alwaysShow,
-  () => nextTick(calcThumb)
-)
+/* 内容尺寸变化时重算滑块 */
+let resizeObserver: ResizeObserver | undefined
 
 onMounted(() => {
   calcThumb()
   const el = wrapRef.value
   if (el) {
     el.addEventListener('scroll', handleScroll)
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => calcThumb())
+      resizeObserver.observe(el)
+      const content = el.firstElementChild
+      if (content) resizeObserver.observe(content)
+    }
   }
   window.addEventListener('resize', calcThumb)
 })
@@ -105,6 +118,8 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', calcThumb)
   window.removeEventListener('mousemove', handleThumbMove)
   window.removeEventListener('mouseup', handleThumbUp)
+  resizeObserver?.disconnect()
+  resizeObserver = undefined
   const el = wrapRef.value
   if (el) {
     el.removeEventListener('scroll', handleScroll)
@@ -116,6 +131,7 @@ onBeforeUnmount(() => {
   <div
     class="wt-scrollbar"
     :class="[props.customClass, { 'is-dragging': dragging }]"
+    :style="highlightStyle"
   >
     <div ref="wrapRef" class="wt-scrollbar__wrap" :style="wrapStyle">
       <div class="wt-scrollbar__content">
@@ -190,7 +206,7 @@ onBeforeUnmount(() => {
   /* 透明度 */
   opacity: 0;
   /* 过渡 */
-  transition: opacity 0.25s ease;
+  transition: opacity var(--wt-motion-fast) ease;
 }
 
 .wt-scrollbar__track.is-visible,
@@ -217,7 +233,7 @@ onBeforeUnmount(() => {
   /* 鼠标指针样式 */
   cursor: grab;
   /* 过渡 */
-  transition: background 0.25s ease;
+  transition: background var(--wt-motion-fast) ease;
 }
 
 .wt-scrollbar__thumb:hover {

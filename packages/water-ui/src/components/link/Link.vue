@@ -7,7 +7,7 @@ defineOptions({ name: 'WtLink' })
 
 /* 声明组件入参与默认值 */
 const props = withDefaults(defineProps<LinkProps>(), {
-  href: '#',
+  href: undefined,
   target: '_self',
   disabled: false,
   underline: true
@@ -17,6 +17,24 @@ const props = withDefaults(defineProps<LinkProps>(), {
 const emit = defineEmits<{
   click: [event: MouseEvent]
 }>()
+
+/* 允许的链接协议白名单 */
+const safeProtocols = ['http:', 'https:', 'mailto:', 'tel:', 'ftp:']
+
+/* 派生状态：安全 href（非法协议降级为不渲染 href） */
+const safeHref = computed(() => {
+  const href = props.href?.trim()
+  if (!href || props.disabled) return undefined
+  try {
+    const protocol = new URL(href, 'http://localhost').protocol
+    return safeProtocols.includes(protocol) ? href : undefined
+  } catch {
+    return undefined
+  }
+})
+
+/* 派生状态：外链自动补充 rel，避免 opener 权限泄漏 */
+const rel = computed(() => (props.target === '_blank' ? 'noopener noreferrer' : undefined))
 
 /* 派生状态（计算属性） */
 const classes = computed(() => [
@@ -32,8 +50,9 @@ const classes = computed(() => [
 <template>
   <a
     :class="classes"
-    :href="disabled ? undefined : href"
+    :href="safeHref"
     :target="target"
+    :rel="rel"
     :aria-disabled="disabled"
     @click="(event: MouseEvent) => emit('click', event)"
   >
@@ -55,7 +74,7 @@ const classes = computed(() => [
   /* 文本装饰线 */
   text-decoration: none;
   /* 过渡动画 */
-  transition: opacity 0.2s ease, color 0.2s ease;
+  transition: opacity var(--wt-motion-fast) ease, color var(--wt-motion-fast) ease;
 }
 
 .wt-link.is-underline {

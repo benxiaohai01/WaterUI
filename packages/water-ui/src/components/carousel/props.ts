@@ -1,4 +1,6 @@
-export interface CarouselProps {
+import type { HighlightProps } from '../../utils/highlight'
+
+export interface CarouselProps extends HighlightProps {
   /** 当前激活索引 */
   activeIndex?: number
   /** 是否自动播放 */

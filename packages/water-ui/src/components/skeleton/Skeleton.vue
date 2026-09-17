@@ -36,14 +36,14 @@ const paragraphArray = computed(() => Array.from({ length: props.paragraphRows }
         :key="`t-${i}`"
         :class="blockClass"
         class="wt-skeleton__title"
-        :style="{ width: `${100 - i * 12}%` }"
+        :style="{ width: `${Math.max(20, 100 - i * 12)}%` }"
       />
       <div
         v-for="i in paragraphArray"
         :key="`p-${i}`"
         :class="blockClass"
         class="wt-skeleton__paragraph"
-        :style="{ width: `${96 - i * 8}%` }"
+        :style="{ width: `${Math.max(20, 96 - i * 8)}%` }"
       />
     </div>
   </div>

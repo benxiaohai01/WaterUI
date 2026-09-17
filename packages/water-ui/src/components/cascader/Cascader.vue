@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import type { CascaderOption, CascaderProps } from './props'
 import { resolveSize } from '../config-provider/context'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtCascader' })
@@ -26,11 +27,15 @@ const emit = defineEmits<{
 /* 响应式状态 */
 const open = ref(false)
 const rootRef = ref<HTMLDivElement>()
-const viewOptions = ref<CascaderOption[]>(props.options)
-const breadcrumb = ref<CascaderOption[]>([])
+const activeIndex = ref(-1)
+/* 展开的面板路径：仅存 value，保证 options 异步更新后仍能重新定位 */
+const breadcrumb = ref<Array<string | number>>([])
 
 /* 解析组件尺寸配置 */
 const size = resolveSize(() => props.size)
+
+/* 组件级高光参数（优先级高于全局配置） */
+const highlightStyle = useHighlightStyle(props)
 
 const findPath = (
 
@@ -48,13 +53,37 @@ const findPath = (
   return trail
 }
 
+/* 派生状态（计算属性）：当前面板选项（由展开路径派生，跟随 options 更新） */
+const viewOptions = computed<CascaderOption[]>(() => {
+  let list = props.options
+  for (const value of breadcrumb.value) {
+    const matched = list.find((option) => option.value === value)
+    if (!matched?.children?.length) return []
+    list = matched.children
+  }
+  return list
+})
+
+/* 派生状态（计算属性）：面包屑路径选项 */
+const breadcrumbOptions = computed<CascaderOption[]>(() => {
+  const list: CascaderOption[] = []
+  let level = props.options
+  for (const value of breadcrumb.value) {
+    const matched = level.find((option) => option.value === value)
+    if (!matched) break
+    list.push(matched)
+    level = matched.children || []
+  }
+  return list
+})
+
 /* 派生状态（计算属性） */
 const selectedPath = computed(() => findPath(props.options, props.modelValue))
 
 /* 派生状态（计算属性） */
 const display = computed(() => {
   if (selectedPath.value.length) return selectedPath.value.map((item) => item.label).join(' / ')
-  return breadcrumb.value.map((item) => item.label).join(' / ')
+  return breadcrumbOptions.value.map((item) => item.label).join(' / ')
 })
 
 /* 派生状态（计算属性） */
@@ -68,13 +97,26 @@ const classes = computed(() => [
   props.customClass
 ])
 
+/* 交互处理逻辑：按已选值逐级定位并展开到其父级面板 */
+const syncBreadcrumb = () => {
+  const path: Array<string | number> = []
+  let level = props.options
+  for (const value of props.modelValue) {
+    const matched = level.find((option) => option.value === value)
+    if (!matched?.children?.length) break
+    path.push(matched.value)
+    level = matched.children
+  }
+  breadcrumb.value = path
+  activeIndex.value = -1
+}
+
 /* 交互处理逻辑 */
 const toggle = () => {
   if (props.disabled) return
   open.value = !open.value
   if (open.value) {
-    viewOptions.value = props.options
-    breadcrumb.value = []
+    syncBreadcrumb()
   }
 }
 
@@ -82,14 +124,15 @@ const toggle = () => {
 const enter = (option: CascaderOption) => {
   if (option.disabled) return
   if (option.children?.length) {
-    breadcrumb.value.push(option)
-    viewOptions.value = option.children
+    breadcrumb.value = [...breadcrumb.value, option.value]
+    activeIndex.value = -1
     return
   }
-  const next = [...breadcrumb.value.map((item) => item.value), option.value]
+  const next = [...breadcrumb.value, option.value]
   emit('update:modelValue', next)
   emit('change', next)
   open.value = false
+  activeIndex.value = -1
 }
 
 /* 交互处理逻辑 */
@@ -98,21 +141,69 @@ const back = () => {
     open.value = false
     return
   }
-  breadcrumb.value.pop()
-  const parent = breadcrumb.value.at(-1)
-  viewOptions.value = parent?.children || props.options
+  breadcrumb.value = breadcrumb.value.slice(0, -1)
+  activeIndex.value = -1
 }
 
-/* 交互处理逻辑 */
+/* 交互处理逻辑：清空 */
 const clear = () => {
   emit('update:modelValue', [])
   emit('clear')
+  breadcrumb.value = []
+  activeIndex.value = -1
+}
+
+/* 交互处理逻辑：键盘移动高亮项（循环） */
+const moveActive = (delta: number) => {
+  const total = viewOptions.value.length
+  if (!total) {
+    activeIndex.value = -1
+    return
+  }
+  const next = activeIndex.value + delta
+  activeIndex.value = next < 0 ? total - 1 : next >= total ? 0 : next
+}
+
+/* 交互处理逻辑：最小键盘可达性（上下移动、回车进入/选中、Esc 关闭/返回上一级） */
+const handleKeydown = (event: KeyboardEvent) => {
+  if (props.disabled) return
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    if (open.value && breadcrumb.value.length) {
+      back()
+      return
+    }
+    open.value = false
+    return
+  }
+  if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    event.preventDefault()
+    if (!open.value) {
+      toggle()
+      return
+    }
+    moveActive(event.key === 'ArrowDown' ? 1 : -1)
+    return
+  }
+  if (event.key === 'Enter') {
+    if (open.value && activeIndex.value >= 0) {
+      const option = viewOptions.value[activeIndex.value]
+      if (option) {
+        event.preventDefault()
+        enter(option)
+        return
+      }
+    }
+    event.preventDefault()
+    toggle()
+  }
 }
 
 /* 交互处理逻辑 */
 const handleOutside = (event: PointerEvent) => {
   if (rootRef.value && !rootRef.value.contains(event.target as Node)) {
     open.value = false
+    activeIndex.value = -1
   }
 }
 
@@ -121,13 +212,21 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', handleOutside)
 </script>
 
 <template>
-  <div ref="rootRef" :class="classes">
-    <div class="wt-cascader__trigger" role="button" tabindex="0" @click="toggle" @keydown.enter.prevent="toggle">
+  <div ref="rootRef" :class="classes" :style="highlightStyle">
+    <div
+      class="wt-cascader__trigger"
+      role="button"
+      tabindex="0"
+      aria-haspopup="listbox"
+      :aria-expanded="open"
+      @click="toggle"
+      @keydown="handleKeydown"
+    >
       <span class="wt-cascader__value" :class="{ 'is-placeholder': !display }">
         {{ display || placeholder }}
       </span>
       <button
-        v-if="clearable && modelValue.length"
+        v-if="clearable && modelValue.length && !disabled"
         class="wt-cascader__clear"
         type="button"
         aria-label="清空"
@@ -139,17 +238,21 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', handleOutside)
     </div>
 
     <div v-if="open" class="wt-cascader__dropdown">
-      <div v-if="breadcrumb.length" class="wt-cascader__breadcrumb">
+      <div v-if="breadcrumbOptions.length" class="wt-cascader__breadcrumb">
         <button type="button" @click="back">上一级</button>
-        <span v-for="item in breadcrumb" :key="String(item.value)">{{ item.label }}</span>
+        <span v-for="item in breadcrumbOptions" :key="String(item.value)">{{ item.label }}</span>
       </div>
-      <ul class="wt-cascader__list">
+      <ul class="wt-cascader__list" role="listbox">
         <li v-if="!viewOptions.length" class="wt-cascader__empty">暂无选项</li>
         <li
-          v-for="option in viewOptions"
+          v-for="(option, index) in viewOptions"
           :key="String(option.value)"
           class="wt-cascader__option"
-          :class="{ 'is-disabled': option.disabled }"
+          :class="{ 'is-disabled': option.disabled, 'is-active': index === activeIndex }"
+          role="option"
+          tabindex="-1"
+          :aria-selected="index === activeIndex"
+          :aria-disabled="option.disabled"
           @click="enter(option)"
         >
           <span>{{ option.label }}</span>
@@ -160,17 +263,17 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', handleOutside)
   </div>
 </template>
 <style scoped lang="scss">
+@use '@water-ui/theme/src/mixins/index.scss' as wt;
+
 .wt-cascader {
-  /* 高光尺寸 */
-  --wt-highlight-size: min(var(--wt-highlight-size-base), 11px);
-  /* 次高光尺寸 */
-  --wt-highlight-small-size: min(calc(var(--wt-highlight-size-base) * 0.5), 6px);
-  /* 高光内边距 */
-  --wt-highlight-inset: min(var(--wt-highlight-offset), 6px);
-  /* 定位方式 */
-  position: relative;
-  /* 创建独立层叠上下文，隔离内部元素 */
-  isolation: isolate;
+  /* 高光尺寸（随全局基准等比缩放，11px / 12px） */
+  --wt-highlight-size: calc(var(--wt-highlight-size-base) * 0.9167);
+  /* 次高光尺寸（随全局基准等比缩放，6px / 12px） */
+  --wt-highlight-small-size: calc(var(--wt-highlight-size-base) * 0.5);
+  /* 高光内边距（随全局偏移等比缩放，6px / 8px） */
+  --wt-highlight-inset: calc(var(--wt-highlight-offset) * 0.75);
+  /* 水滴高光：定位方式 + 独立层叠上下文 + 主/次高光伪元素（层叠层级 1） */
+  @include wt.wt-liquid-highlights(1);
   /* 层叠层级 */
   z-index: 1;
   /* 宽度 */
@@ -223,56 +326,6 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', handleOutside)
   animation: wt-liquid-flow-subtle var(--wt-motion-slow) ease-in-out infinite;
 }
 
-.wt-cascader::after,
-.wt-cascader::before {
-  /* 伪元素内容 */
-  content: '';
-  /* 定位方式 */
-  position: absolute;
-  /* 是否响应鼠标事件 */
-  pointer-events: none;
-  /* 层叠层级 */
-  z-index: 1;
-}
-
-.wt-cascader::after {
-  /* 宽度 */
-  width: var(--wt-highlight-size);
-  /* 高度 */
-  height: var(--wt-highlight-size);
-  /* 顶部偏移 */
-  top: var(--wt-highlight-top);
-  /* 右侧偏移 */
-  right: var(--wt-highlight-right);
-  /* 背景 */
-  background: var(--wt-highlight);
-  /* 圆角，塑造水滴/液体轮廓 */
-  border-radius: var(--wt-highlight-radius);
-  /* 动画 */
-  animation: wt-highlight-float var(--wt-motion-normal) ease-in-out infinite;
-  /* 透明度 */
-  opacity: var(--wt-highlight-opacity);
-}
-
-.wt-cascader::before {
-  /* 宽度 */
-  width: var(--wt-highlight-small-size);
-  /* 高度 */
-  height: var(--wt-highlight-small-size);
-  /* 顶部偏移 */
-  top: var(--wt-highlight-small-top);
-  /* 右侧偏移 */
-  right: var(--wt-highlight-small-right);
-  /* 背景 */
-  background: var(--wt-highlight-small);
-  /* 圆角，塑造水滴/液体轮廓 */
-  border-radius: var(--wt-highlight-small-radius);
-  /* 动画 */
-  animation: wt-highlight-float-small var(--wt-motion-slow) ease-in-out infinite;
-  /* 透明度 */
-  opacity: var(--wt-highlight-small-opacity);
-}
-
 .wt-cascader__value {
   /* 弹性布局中的伸缩比例 */
   flex: 1;
@@ -320,7 +373,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', handleOutside)
   /* 顶部边框 */
   border-top: 6px solid var(--wt-text-secondary);
   /* 过渡动画 */
-  transition: transform 0.2s ease;
+  transition: transform var(--wt-motion-fast) ease;
 }
 
 .wt-cascader.is-open .wt-cascader__caret {
@@ -413,7 +466,8 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', handleOutside)
   cursor: pointer;
 }
 
-.wt-cascader__option:hover {
+.wt-cascader__option:hover,
+.wt-cascader__option.is-active {
   /* 背景 */
   background: color-mix(in srgb, var(--wt-primary) 14%, transparent);
   /* 文本颜色 */

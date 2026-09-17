@@ -5,7 +5,6 @@ export type WtComponentSize = 'small' | 'medium' | 'large'
 export interface WtConfig {
   theme: 'light' | 'dark' | 'system'
   size: WtComponentSize
-  prefix: string
 }
 
 export const wtConfigKey: InjectionKey<ComputedRef<WtConfig>> = Symbol('wtConfig')

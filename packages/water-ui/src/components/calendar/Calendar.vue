@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import type { CalendarProps, CalendarEmits } from './props'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtCalendar' })
@@ -15,20 +16,44 @@ const props = withDefaults(defineProps<CalendarProps>(), {
 /* 声明组件事件 */
 const emit = defineEmits<CalendarEmits>()
 
+/* 组件级高光参数（优先级高于全局配置） */
+const highlightStyle = useHighlightStyle(props)
+
 /* 响应式状态：当前显示的年月 */
-const today = new Date()
-const viewYear = ref(props.year || today.getFullYear())
-const viewMonth = ref(props.month || today.getMonth() + 1)
+const viewYear = ref(props.year ?? new Date().getFullYear())
+const viewMonth = ref(props.month ?? new Date().getMonth() + 1)
 
 /* 响应式状态：选中日期（YYYY-MM-DD） */
 const selected = ref(props.modelValue)
 
-/* 同步外部 modelValue */
+/* 交互处理逻辑：格式化日期为 YYYY-MM-DD（依赖 Date 构造归一化跨年跨月） */
+const formatDate = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+
+/* 交互处理逻辑：取当前日期字符串（实时读取，避免 setup 期固定后过期） */
+const getTodayStr = () => formatDate(new Date())
+
+/* 同步外部年月（受控视图） */
+watch(
+  () => [props.year, props.month],
+  ([year, month]) => {
+    if (year !== undefined) viewYear.value = year
+    if (month !== undefined) viewMonth.value = month
+  }
+)
+
+/* 同步外部 modelValue：选中态与视图同步跳到对应年月 */
 watch(
   () => props.modelValue,
   (value) => {
     selected.value = value
-  }
+    const matched = /^(\d{4})-(\d{1,2})/.exec(value || '')
+    if (matched) {
+      viewYear.value = Number(matched[1])
+      viewMonth.value = Number(matched[2])
+    }
+  },
+  { immediate: true }
 )
 
 /* 派生状态：当月第一天星期几（0=周日） */
@@ -49,25 +74,19 @@ const cells = computed<CalendarCell[]>(() => {
   const list: CalendarCell[] = []
   for (let i = firstDay.value - 1; i >= 0; i -= 1) {
     const day = prevDays - i
-    const date = `${viewYear.value}-${String(viewMonth.value - 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    const date = formatDate(new Date(viewYear.value, viewMonth.value - 2, day))
     list.push({ day, inMonth: false, date })
   }
   for (let day = 1; day <= daysInMonth.value; day += 1) {
-    const date = `${viewYear.value}-${String(viewMonth.value).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    const date = formatDate(new Date(viewYear.value, viewMonth.value - 1, day))
     list.push({ day, inMonth: true, date })
   }
   const remain = (7 - (list.length % 7)) % 7
   for (let day = 1; day <= remain; day += 1) {
-    const date = `${viewYear.value}-${String(viewMonth.value + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    const date = formatDate(new Date(viewYear.value, viewMonth.value, day))
     list.push({ day, inMonth: false, date })
   }
   return list
-})
-
-/* 派生状态：今天日期字符串 */
-const todayStr = computed(() => {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 })
 
 /* 交互处理逻辑：选择日期 */
@@ -92,10 +111,11 @@ const goMonth = (delta: number) => {
 
 /* 交互处理逻辑：回到今天 */
 const goToday = () => {
-  viewYear.value = today.getFullYear()
-  viewMonth.value = today.getMonth() + 1
-  selected.value = todayStr.value
-  emit('update:modelValue', todayStr.value)
+  const now = new Date()
+  viewYear.value = now.getFullYear()
+  viewMonth.value = now.getMonth() + 1
+  selected.value = getTodayStr()
+  emit('update:modelValue', getTodayStr())
   emit('change', viewYear.value, viewMonth.value)
 }
 
@@ -104,7 +124,7 @@ const weekdays = ['日', '一', '二', '三', '四', '五', '六']
 </script>
 
 <template>
-  <div :class="['wt-calendar', props.customClass]">
+  <div :class="['wt-calendar', props.customClass]" :style="highlightStyle">
     <div class="wt-calendar__header">
       <button type="button" class="wt-calendar__nav" aria-label="上个月" @click="goMonth(-1)">‹</button>
       <div class="wt-calendar__title">{{ viewYear }} 年 {{ viewMonth }} 月</div>
@@ -114,7 +134,7 @@ const weekdays = ['日', '一', '二', '三', '四', '五', '六']
     <div class="wt-calendar__weekdays">
       <span v-for="weekday in weekdays" :key="weekday" class="wt-calendar__weekday">{{ weekday }}</span>
     </div>
-    <div class="wt-calendar__grid">
+    <div class="wt-calendar__grid" role="grid">
       <button
         v-for="cell in cells"
         :key="cell.date"
@@ -123,8 +143,9 @@ const weekdays = ['日', '一', '二', '三', '四', '五', '六']
         :class="{
           'is-outside': !cell.inMonth,
           'is-selected': cell.date === selected,
-          'is-today': cell.date === todayStr
+          'is-today': cell.date === getTodayStr()
         }"
+        :aria-selected="cell.date === selected"
         @click="selectDate(cell)"
       >
         {{ cell.day }}
@@ -134,7 +155,21 @@ const weekdays = ['日', '一', '二', '三', '四', '五', '六']
 </template>
 
 <style scoped lang="scss">
+@use '@water-ui/theme/src/mixins/index.scss' as wt;
+
 .wt-calendar {
+  /* 高光尺寸（随全局基准等比缩放，6px / 12px）：声明在根元素，便于组件 props 覆盖 */
+  --wt-highlight-size: calc(var(--wt-highlight-size-base) * 0.5);
+  /* 次高光尺寸（随全局基准等比缩放，3px / 12px） */
+  --wt-highlight-small-size: calc(var(--wt-highlight-size-base) * 0.25);
+  /* 高光内边距（随全局偏移等比缩放，3px / 8px） */
+  --wt-highlight-inset: calc(var(--wt-highlight-offset) * 0.375);
+  /* 主高光定位：右上角 */
+  --wt-highlight-top: var(--wt-highlight-inset);
+  --wt-highlight-right: var(--wt-highlight-inset);
+  /* 次高光定位：右下角，避让居中日期文字 */
+  --wt-highlight-small-top: calc(100% - var(--wt-highlight-small-size) - var(--wt-highlight-inset));
+  --wt-highlight-small-right: var(--wt-highlight-inset);
   /* 宽度 */
   width: 100%;
   /* 最大宽度 */
@@ -150,10 +185,8 @@ const weekdays = ['日', '一', '二', '三', '四', '五', '六']
     0 10px 26px rgba(0, 0, 0, 0.05);
   /* 内边距 */
   padding: 18px;
-  /* 动画 */
-  animation: wt-liquid-flow-subtle var(--wt-motion-slow) ease-in-out infinite;
-  /* 动画性能提示 */
-  will-change: border-radius;
+  /* 液体形变动画（含 will-change: border-radius） */
+  @include wt.wt-liquid-animation(wt-liquid-flow-subtle, var(--wt-motion-slow), border-radius);
 }
 
 .wt-calendar__header {
@@ -275,9 +308,9 @@ const weekdays = ['日', '一', '二', '三', '四', '五', '六']
   cursor: pointer;
   /* 过渡 */
   transition:
-    background 0.2s ease,
-    color 0.2s ease,
-    box-shadow 0.2s ease;
+    background var(--wt-motion-fast) ease,
+    color var(--wt-motion-fast) ease,
+    box-shadow var(--wt-motion-fast) ease;
 }
 
 .wt-calendar__cell:hover {
@@ -298,6 +331,12 @@ const weekdays = ['日', '一', '二', '三', '四', '五', '六']
 }
 
 .wt-calendar__cell.is-selected {
+  /* 水滴高光：定位方式 + 独立层叠上下文 + 主/次高光伪元素（层叠层级 2） */
+  @include wt.wt-liquid-highlights(2);
+  /* 溢出裁剪方式（高光收束在日期格内） */
+  overflow: hidden;
+  /* 液体形变动画（含 will-change: border-radius） */
+  @include wt.wt-liquid-animation(wt-liquid-flow, var(--wt-motion-normal), border-radius);
   /* 背景 */
   background: color-mix(in srgb, var(--wt-primary) 16%, transparent);
   /* 文本颜色 */

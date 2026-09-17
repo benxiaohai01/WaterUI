@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onBeforeUnmount, ref } from 'vue'
 
 defineOptions({ name: 'DocsCodeBlock' })
 
@@ -10,6 +10,9 @@ const props = defineProps<{
 
 const copied = ref(false)
 const expanded = ref(false)
+
+/* 复制状态回退定时器句柄，卸载时必须清理 */
+let copyTimer: number | undefined
 
 const fallbackCopy = (text: string) => {
   const textarea = document.createElement('textarea')
@@ -41,12 +44,17 @@ const copy = async () => {
   } finally {
     copied.value = copiedSuccessfully
     if (copiedSuccessfully) {
-      window.setTimeout(() => {
+      window.clearTimeout(copyTimer)
+      copyTimer = window.setTimeout(() => {
         copied.value = false
       }, 1500)
     }
   }
 }
+
+onBeforeUnmount(() => {
+  window.clearTimeout(copyTimer)
+})
 </script>
 
 <template>
@@ -58,9 +66,9 @@ const copy = async () => {
           <template #icon>
             <wt-icon :name="copied ? 'check' : 'copy'" :size="14" />
           </template>
-          {{ copied ? '已复制' : '复制代码' }}
+          <span aria-live="polite">{{ copied ? '已复制' : '复制代码' }}</span>
         </wt-button>
-        <wt-button size="small" type="default" @click="expanded = !expanded">
+        <wt-button size="small" type="default" :aria-expanded="expanded" @click="expanded = !expanded">
           <template #icon>
             <wt-icon :name="expanded ? 'chevron-down' : 'code'" :size="14" />
           </template>
@@ -81,7 +89,7 @@ const copy = async () => {
   background: color-mix(in srgb, var(--wt-surface) 72%, var(--wt-primary) 8%);
   color: var(--wt-text);
   box-shadow:
-    inset 3px 4px 10px rgba(0, 0, 0, 0.12),
+    inset 3px 4px 10px var(--wt-shadow-dark),
     inset -2px -2px 6px var(--wt-shadow-light),
     0 10px 26px color-mix(in srgb, var(--wt-primary) 14%, transparent);
 }
@@ -105,25 +113,8 @@ const copy = async () => {
   transition: max-height 0.16s ease;
 }
 
-.code-block__body::after {
-  content: '';
-  position: absolute;
-  inset: auto 0 0;
-  height: 56px;
-  background: linear-gradient(
-    to bottom,
-    transparent,
-    color-mix(in srgb, var(--wt-surface) 78%, var(--wt-primary) 8%)
-  );
-  pointer-events: none;
-}
-
 .code-block__body.is-expanded {
-  max-height: 1600px;
-}
-
-.code-block__body.is-expanded::after {
-  display: none;
+  max-height: none;
 }
 
 .code-block pre {

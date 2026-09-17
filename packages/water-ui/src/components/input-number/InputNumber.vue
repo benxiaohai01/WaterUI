@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import type { InputNumberProps } from './props'
 import { resolveSize } from '../config-provider/context'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtInputNumber' })
@@ -34,6 +35,9 @@ const inputValue = ref(String(props.modelValue))
 /* 解析组件尺寸配置 */
 const size = resolveSize(() => props.size)
 
+/* 组件级高光参数（优先级高于全局配置） */
+const highlightStyle = useHighlightStyle(props)
+
 /* 派生状态（计算属性） */
 const classes = computed(() => [
   'wt-input-number',
@@ -46,15 +50,26 @@ const classes = computed(() => [
   props.customClass
 ])
 
+/* 派生状态（计算属性）：精度收敛为非负整数，避免 toFixed 抛 RangeError */
+const precision = computed(() =>
+  props.precision === undefined ? undefined : Math.max(0, Math.trunc(props.precision))
+)
+
 /* 交互处理逻辑 */
 const format = (value: number) => {
-  const next = props.precision === undefined ? value : Number(value.toFixed(props.precision))
+  const next = precision.value === undefined ? value : Number(value.toFixed(precision.value))
   return String(next)
 }
 
 /* 交互处理逻辑 */
 const clamp = (value: number) => {
   return Math.min(Math.max(value, props.min), props.max)
+}
+
+/* 交互处理逻辑：按步长对齐并夹取到 [min, max] */
+const normalize = (value: number) => {
+  const aligned = props.step > 0 ? Math.round(value / props.step) * props.step : value
+  return clamp(aligned)
 }
 
 watch(
@@ -76,8 +91,16 @@ const handleInput = (event: Event) => {
 
 /* 交互处理逻辑 */
 const handleChange = () => {
+  /* 空串表示清空：不回写 0 或 min，恢复上一次有效值并同步 emit */
+  if (inputValue.value.trim() === '') {
+    const restored = clamp(Number(props.modelValue ?? 0))
+    inputValue.value = format(restored)
+    emit('update:modelValue', restored)
+    emit('change', restored)
+    return
+  }
   const parsed = Number(inputValue.value)
-  const next = Number.isNaN(parsed) ? props.min : clamp(parsed)
+  const next = Number.isNaN(parsed) ? props.min : normalize(parsed)
   inputValue.value = format(next)
   emit('update:modelValue', next)
   emit('change', next)
@@ -86,7 +109,7 @@ const handleChange = () => {
 /* 交互处理逻辑 */
 const adjust = (direction: 1 | -1) => {
   if (props.disabled || props.readonly) return
-  const next = clamp(Number(props.modelValue || 0) + direction * props.step)
+  const next = normalize(Number(props.modelValue || 0) + direction * props.step)
   inputValue.value = format(next)
   emit('update:modelValue', next)
   emit('change', next)
@@ -94,7 +117,7 @@ const adjust = (direction: 1 | -1) => {
 </script>
 
 <template>
-  <div :class="classes">
+  <div :class="classes" :style="highlightStyle">
     <input
       class="wt-input-number__native"
       inputmode="decimal"
@@ -107,24 +130,24 @@ const adjust = (direction: 1 | -1) => {
       @focus="(event: FocusEvent) => emit('focus', event)"
       @blur="(event: FocusEvent) => emit('blur', event)"
     >
-    <span v-if="controls" class="wt-input-number__controls" aria-hidden="true">
+    <span v-if="controls" class="wt-input-number__controls">
       <button type="button" aria-label="增加" :disabled="disabled || readonly" @click="adjust(1)">+</button>
       <button type="button" aria-label="减少" :disabled="disabled || readonly" @click="adjust(-1)">-</button>
     </span>
   </div>
 </template>
 <style scoped lang="scss">
+@use '@water-ui/theme/src/mixins/index.scss' as wt;
+
 .wt-input-number {
-  /* 高光尺寸 */
-  --wt-highlight-size: min(var(--wt-highlight-size-base), 11px);
-  /* 次高光尺寸 */
-  --wt-highlight-small-size: min(calc(var(--wt-highlight-size-base) * 0.5), 6px);
-  /* 高光内边距 */
-  --wt-highlight-inset: min(var(--wt-highlight-offset), 6px);
-  /* 定位方式 */
-  position: relative;
-  /* 创建独立层叠上下文，隔离内部元素 */
-  isolation: isolate;
+  /* 高光尺寸（随全局基准等比缩放，11px / 12px） */
+  --wt-highlight-size: calc(var(--wt-highlight-size-base) * 0.9167);
+  /* 次高光尺寸（随全局基准等比缩放，6px / 12px） */
+  --wt-highlight-small-size: calc(var(--wt-highlight-size-base) * 0.5);
+  /* 高光内边距（随全局偏移等比缩放，6px / 8px） */
+  --wt-highlight-inset: calc(var(--wt-highlight-offset) * 0.75);
+  /* 水滴高光：定位方式 + 独立层叠上下文 + 主/次高光伪元素（层叠层级 2） */
+  @include wt.wt-liquid-highlights(2);
   /* 盒模型显示方式 */
   display: inline-flex;
   /* 交叉轴对齐方式 */
@@ -150,57 +173,7 @@ const adjust = (direction: 1 | -1) => {
   /* 动画 */
   animation: wt-liquid-flow-subtle var(--wt-motion-slow) ease-in-out infinite;
   /* 过渡动画 */
-  transition: box-shadow 0.25s ease;
-}
-
-.wt-input-number::after,
-.wt-input-number::before {
-  /* 伪元素内容 */
-  content: '';
-  /* 定位方式 */
-  position: absolute;
-  /* 是否响应鼠标事件 */
-  pointer-events: none;
-  /* 层叠层级 */
-  z-index: 2;
-}
-
-.wt-input-number::after {
-  /* 宽度 */
-  width: var(--wt-highlight-size);
-  /* 高度 */
-  height: var(--wt-highlight-size);
-  /* 顶部偏移 */
-  top: var(--wt-highlight-top);
-  /* 右侧偏移 */
-  right: var(--wt-highlight-right);
-  /* 背景 */
-  background: var(--wt-highlight);
-  /* 圆角，塑造水滴/液体轮廓 */
-  border-radius: var(--wt-highlight-radius);
-  /* 动画 */
-  animation: wt-highlight-float var(--wt-motion-normal) ease-in-out infinite;
-  /* 透明度 */
-  opacity: var(--wt-highlight-opacity);
-}
-
-.wt-input-number::before {
-  /* 宽度 */
-  width: var(--wt-highlight-small-size);
-  /* 高度 */
-  height: var(--wt-highlight-small-size);
-  /* 顶部偏移 */
-  top: var(--wt-highlight-small-top);
-  /* 右侧偏移 */
-  right: var(--wt-highlight-small-right);
-  /* 背景 */
-  background: var(--wt-highlight-small);
-  /* 圆角，塑造水滴/液体轮廓 */
-  border-radius: var(--wt-highlight-small-radius);
-  /* 动画 */
-  animation: wt-highlight-float-small var(--wt-motion-slow) ease-in-out infinite;
-  /* 透明度 */
-  opacity: var(--wt-highlight-small-opacity);
+  transition: box-shadow var(--wt-motion-fast) ease;
 }
 
 .wt-input-number__native {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { BreadcrumbProps } from './props'
 import { provideBreadcrumb } from './context'
 
@@ -12,8 +12,27 @@ const props = withDefaults(defineProps<BreadcrumbProps>(), {
   customClass: ''
 })
 
-/* 向子项提供分隔符上下文 */
-provideBreadcrumb({ separator: props.separator })
+/* 响应式状态：子项注册顺序 */
+const items = ref<object[]>([])
+
+/* 交互处理逻辑：子项注册 / 注销，供子项判定自身是否为最后一项 */
+const registerItem = (item: object) => {
+  items.value = [...items.value, item]
+}
+
+const unregisterItem = (item: object) => {
+  items.value = items.value.filter((current) => current !== item)
+}
+
+/* 向子项提供分隔符与顺序上下文（getter 保证 props 变化实时生效） */
+provideBreadcrumb({
+  get separator() {
+    return props.separator
+  },
+  items,
+  registerItem,
+  unregisterItem
+})
 
 /* 派生状态：容器类名 */
 const classes = computed(() => ['wt-breadcrumb', props.customClass])

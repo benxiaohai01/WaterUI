@@ -1,4 +1,6 @@
-export interface PageHeaderProps {
+import type { HighlightProps } from '../../utils/highlight'
+
+export interface PageHeaderProps extends HighlightProps {
   /** 标题 */
   title?: string
   /** 副标题 */

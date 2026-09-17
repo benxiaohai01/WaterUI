@@ -1,3 +1,5 @@
+import type { HighlightProps } from '../../utils/highlight'
+
 export type CascaderSize = 'small' | 'medium' | 'large'
 
 export interface CascaderOption {
@@ -7,7 +9,7 @@ export interface CascaderOption {
   disabled?: boolean
 }
 
-export interface CascaderProps {
+export interface CascaderProps extends HighlightProps {
   modelValue?: Array<string | number>
   options: CascaderOption[]
   placeholder?: string

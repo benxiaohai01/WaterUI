@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { SliderProps } from './props'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtSlider' })
@@ -21,6 +22,9 @@ const emit = defineEmits<{
   change: [value: number]
 }>()
 
+/* 组件级高光参数（优先级高于全局配置）：滑动条暂无高光伪元素，仅提供统一的内联变量接线 */
+const highlightStyle = useHighlightStyle(props)
+
 // --wt-slider-progress：滑块已填充区域的百分比，用于绘制水滴渐变进度。
 const progress = computed(() => {
   const range = props.max - props.min
@@ -40,7 +44,7 @@ const handleChange = (event: Event) => {
 </script>
 
 <template>
-  <div class="wt-slider" :class="{ 'is-disabled': disabled }">
+  <div class="wt-slider" :class="{ 'is-disabled': disabled }" :style="highlightStyle">
     <input
       class="wt-slider__native"
       type="range"

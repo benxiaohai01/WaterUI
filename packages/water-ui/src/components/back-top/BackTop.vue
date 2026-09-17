@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { BackTopProps } from './props'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtBackTop' })
@@ -23,6 +24,12 @@ const visible = ref(false)
 
 /* 响应式状态：滚动容器 */
 const scrollContainer = ref<HTMLElement | Window | null>(null)
+
+/* 动画帧句柄：用于取消进行中的滚动动画 */
+let rafId: number | null = null
+
+/* 组件级高光参数（优先级高于全局配置） */
+const highlightStyle = useHighlightStyle(props)
 
 /* 派生状态：容器类名 */
 const classes = computed(() => [
@@ -50,11 +57,19 @@ const handleScroll = () => {
   if (shouldShow !== visible.value) visible.value = shouldShow
 }
 
+/* 取消进行中的滚动动画 */
+const cancelScroll = () => {
+  if (rafId === null) return
+  cancelAnimationFrame(rafId)
+  rafId = null
+}
+
 /* 平滑滚动到顶部 */
 const scrollToTop = () => {
   const container = scrollContainer.value ?? window
   const start = getScrollTop()
   if (start <= 0) return
+  cancelScroll()
   const startTime = performance.now()
 
   const step = (now: number) => {
@@ -66,10 +81,14 @@ const scrollToTop = () => {
     } else {
       ;(container as HTMLElement).scrollTop = top
     }
-    if (progress < 1) requestAnimationFrame(step)
+    if (progress < 1) {
+      rafId = requestAnimationFrame(step)
+    } else {
+      rafId = null
+    }
   }
 
-  requestAnimationFrame(step)
+  rafId = requestAnimationFrame(step)
 }
 
 /* 交互处理逻辑：点击 */
@@ -86,6 +105,8 @@ const bind = () => {
 }
 
 const unbind = () => {
+  /* 卸载或切换容器时终止动画，避免继续写入 scrollTop */
+  cancelScroll()
   if (!scrollContainer.value) return
   scrollContainer.value.removeEventListener('scroll', handleScroll)
   scrollContainer.value = null
@@ -105,6 +126,7 @@ watch(() => props.container, () => {
     <button
       v-show="visible"
       :class="classes"
+      :style="highlightStyle"
       type="button"
       aria-label="返回顶部"
       @click="handleClick"
@@ -117,9 +139,13 @@ watch(() => props.container, () => {
 </template>
 
 <style scoped lang="scss">
+@use '@water-ui/theme/src/mixins/index.scss' as wt;
+
 .wt-back-top {
-  /* 定位方式 */
-  position: fixed;
+  /* 水滴高光：固定定位 + 独立层叠上下文 + 主/次高光伪元素（层叠层级 2） */
+  @include wt.wt-liquid-highlights(2, fixed);
+  /* 水滴流动动画：圆角微变形 */
+  @include wt.wt-liquid-animation(wt-liquid-flow, var(--wt-motion-normal), border-radius);
   /* 右侧偏移 */
   right: 32px;
   /* 底部偏移 */
@@ -157,9 +183,9 @@ watch(() => props.container, () => {
   z-index: 50;
   /* 过渡动画 */
   transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease,
-    color 0.2s ease;
+    transform var(--wt-motion-fast) ease,
+    box-shadow var(--wt-motion-fast) ease,
+    color var(--wt-motion-fast) ease;
 }
 
 .wt-back-top:hover {
@@ -186,8 +212,8 @@ watch(() => props.container, () => {
 .wt-back-top-leave-active {
   /* 过渡动画 */
   transition:
-    opacity 0.25s ease,
-    transform 0.25s ease;
+    opacity var(--wt-motion-fast) ease,
+    transform var(--wt-motion-fast) ease;
 }
 
 .wt-back-top-enter-from,

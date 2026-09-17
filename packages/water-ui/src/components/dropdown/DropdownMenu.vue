@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import type { DropdownMenuProps } from './props'
 import { useDropdown } from './context'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtDropdownMenu' })
@@ -12,6 +13,9 @@ const props = withDefaults(defineProps<DropdownMenuProps>(), {
 })
 
 const dropdown = useDropdown()
+
+/* 组件级高光参数（优先级高于全局配置）；水滴表面在菜单面板上，故绑定到面板元素 */
+const highlightStyle = useHighlightStyle(props)
 
 /* 派生状态：菜单类名 */
 const classes = computed(() => [
@@ -24,7 +28,7 @@ const classes = computed(() => [
 
 <template>
   <transition name="wt-dropdown">
-    <ul v-show="dropdown?.visible" :class="classes" role="menu">
+    <ul v-show="dropdown?.visible" :class="classes" :style="highlightStyle" role="menu">
       <slot />
     </ul>
   </transition>
@@ -88,8 +92,8 @@ const classes = computed(() => [
 .wt-dropdown-leave-active {
   /* 过渡动画 */
   transition:
-    opacity 0.18s ease,
-    transform 0.18s ease;
+    opacity var(--wt-motion-fast) ease,
+    transform var(--wt-motion-fast) ease;
 }
 
 .wt-dropdown-enter-from,

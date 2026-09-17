@@ -1,3 +1,5 @@
+import type { HighlightProps } from '../../utils/highlight'
+
 export type TabsType = 'text' | 'card'
 export type TabsPosition = 'top' | 'right' | 'bottom' | 'left'
 
@@ -14,7 +16,7 @@ export interface TabPaneProps {
   customClass?: string
 }
 
-export interface TabsProps {
+export interface TabsProps extends HighlightProps {
   /** 当前激活选项卡标识（v-model） */
   modelValue?: string | number
   /** 默认激活选项卡标识（非受控场景） */

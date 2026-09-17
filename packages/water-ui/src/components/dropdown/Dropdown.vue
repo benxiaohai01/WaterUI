@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import type { DropdownProps } from './props'
 import { provideDropdown } from './context'
 
@@ -67,8 +67,28 @@ const handleOutside = (event: PointerEvent) => {
   }
 }
 
-onMounted(() => document.addEventListener('pointerdown', handleOutside))
-onBeforeUnmount(() => document.removeEventListener('pointerdown', handleOutside))
+/* 交互处理逻辑：Esc 关闭 */
+const handleKeydown = (event: KeyboardEvent) => {
+  if (event.key === 'Escape') setVisible(false)
+}
+
+/* 生命周期：仅在展开时注册全局监听，避免实例常驻 */
+watch(visible, (value) => {
+  if (typeof document === 'undefined') return
+  if (value) {
+    document.addEventListener('pointerdown', handleOutside)
+    document.addEventListener('keydown', handleKeydown)
+  } else {
+    document.removeEventListener('pointerdown', handleOutside)
+    document.removeEventListener('keydown', handleKeydown)
+  }
+})
+
+/* 生命周期：卸载时移除全局监听 */
+onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', handleOutside)
+  document.removeEventListener('keydown', handleKeydown)
+})
 </script>
 
 <template>

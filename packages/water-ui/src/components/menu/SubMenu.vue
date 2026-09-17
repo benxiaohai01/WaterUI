@@ -92,8 +92,8 @@ const toggle = () => {
   cursor: pointer;
   /* 过渡动画 */
   transition:
-    background 0.2s ease,
-    color 0.2s ease;
+    background var(--wt-motion-fast) ease,
+    color var(--wt-motion-fast) ease;
 }
 
 .wt-sub-menu__title:hover {
@@ -114,7 +114,7 @@ const toggle = () => {
   /* 字号 */
   font-size: 12px;
   /* 过渡动画 */
-  transition: transform 0.25s ease;
+  transition: transform var(--wt-motion-fast) ease;
 }
 
 .wt-sub-menu.is-open > .wt-sub-menu__title .wt-sub-menu__arrow {

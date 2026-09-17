@@ -1,6 +1,8 @@
+import type { HighlightProps } from '../../utils/highlight'
+
 export type BadgeType = 'default' | 'primary' | 'success' | 'warning' | 'danger' | 'info'
 
-export interface BadgeProps {
+export interface BadgeProps extends HighlightProps {
   /** 徽标显示内容（数字或文本） */
   value?: number | string
   /** 最大值，超出后显示 max+（仅数字生效） */

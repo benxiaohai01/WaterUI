@@ -27,10 +27,10 @@ app.use(WaterUI)`
               <wt-icon name="arrow-right" :size="18" />
             </template>
           </wt-button>
-          <wt-button size="large" type="default">
-            GitHub
+          <wt-button size="large" type="default" @click="$router.push('/components/button')">
+            查看文档
             <template #icon>
-              <wt-icon name="github" :size="18" />
+              <wt-icon name="code" :size="18" />
             </template>
           </wt-button>
         </wt-space>
@@ -44,21 +44,21 @@ app.use(WaterUI)`
 
     <section class="home__features">
       <wt-row :gutter="[18, 18]">
-        <wt-col :span="24" :sm="12" :lg="8">
+        <wt-col :span="24" :sm="12" :md="8" :lg="8">
           <article class="feature-card">
             <wt-icon name="code" :size="24" color="var(--wt-primary)" />
             <h3>可组合 API</h3>
             <p>统一的 props、slots、events 与 v-model，组件之间可以灵活组合。</p>
           </article>
         </wt-col>
-        <wt-col :span="24" :sm="12" :lg="8">
+        <wt-col :span="24" :sm="12" :md="8" :lg="8">
           <article class="feature-card">
             <wt-icon name="moon" :size="24" color="var(--wt-primary)" />
             <h3>明暗主题</h3>
             <p>基于 CSS 自定义属性的完整主题系统，支持暗黑模式与局部主题。</p>
           </article>
         </wt-col>
-        <wt-col :span="24" :sm="12" :lg="8">
+        <wt-col :span="24" :sm="12" :md="8" :lg="8">
           <article class="feature-card">
             <wt-icon name="external" :size="24" color="var(--wt-primary)" />
             <h3>一键换肤</h3>
@@ -100,7 +100,7 @@ app.use(WaterUI)`
   grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.95fr);
   align-items: center;
   gap: 48px;
-  min-height: calc(100vh - 64px);
+  min-height: calc(100dvh - 64px);
   padding: 60px 0;
 }
 
@@ -129,9 +129,9 @@ app.use(WaterUI)`
   background: transparent;
   border: 1px solid color-mix(in srgb, var(--wt-shadow-dark) 26%, transparent);
   box-shadow:
-    inset 14px 24px 40px rgba(0, 0, 0, 0.18),
-    inset -12px -14px 30px rgba(255, 255, 255, 0.5),
-    18px 26px 55px rgba(0, 0, 0, 0.12);
+    inset 14px 24px 40px var(--wt-shadow-dark),
+    inset -12px -14px 30px color-mix(in srgb, var(--wt-highlight) 50%, transparent),
+    18px 26px 55px color-mix(in srgb, var(--wt-shadow-dark) 70%, transparent);
   animation: home-drop 5s ease-in-out infinite alternate;
 }
 
@@ -142,7 +142,7 @@ app.use(WaterUI)`
   width: 35px;
   height: 35px;
   border-radius: 48% 52% 59% 21% / 46% 25% 55% 54%;
-  background: rgb(255, 255, 255);
+  background: var(--wt-highlight);
   animation: home-highlight-wobble 4.6s ease-in-out infinite;
   will-change: transform;
 }
@@ -152,7 +152,7 @@ app.use(WaterUI)`
   left: 37%;
   width: 15px;
   height: 15px;
-  background: rgba(255, 255, 255, 1);
+  background: var(--wt-highlight);
   animation-duration: 3.6s;
   animation-delay: 0.8s;
 }
@@ -167,9 +167,9 @@ app.use(WaterUI)`
   border-radius: var(--wt-radius-md);
   background: color-mix(in srgb, var(--wt-surface) 86%, transparent);
   box-shadow:
-    inset 2px 3px 8px rgba(0, 0, 0, 0.08),
+    inset 2px 3px 8px var(--wt-shadow-dark),
     inset -2px -2px 5px var(--wt-shadow-light),
-    0 10px 28px rgba(0, 0, 0, 0.06);
+    0 10px 28px color-mix(in srgb, var(--wt-shadow-dark) 60%, transparent);
 }
 
 .feature-card h3 {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
 import type { SplitterProps } from './props'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtSplitter' })
@@ -11,6 +12,7 @@ const props = withDefaults(defineProps<SplitterProps>(), {
   modelValue: 260,
   min: 80,
   max: 800,
+  step: 8,
   barSize: 8,
   customClass: ''
 })
@@ -24,6 +26,9 @@ const emit = defineEmits<{
 /* 容器引用 */
 const containerRef = ref<HTMLElement>()
 
+/* 组件级高光参数（优先级高于全局配置） */
+const highlightStyle = useHighlightStyle(props)
+
 /* 响应式状态：是否正在拖拽 */
 const dragging = ref(false)
 
@@ -31,6 +36,10 @@ const dragging = ref(false)
 let startClient = 0
 let startSize = 0
 let startContainer = 0
+/* 拖拽过程中的最新尺寸（结束时统一 emit change） */
+let dragSize = 0
+/* 拖拽前的 body 用户选择样式（用于还原） */
+let originalUserSelect = ''
 
 /* 派生状态：容器类名 */
 const classes = computed(() => [
@@ -54,6 +63,14 @@ const panelStyle = computed(() => {
     : { height: `${size}px` }
 })
 
+/* 交互处理逻辑：面板尺寸上界（同时受容器尺寸、max 约束，且不小于 min） */
+const resolveUpperBound = (containerSize: number) =>
+  Math.max(props.min, Math.min(containerSize - props.min, props.max))
+
+/* 交互处理逻辑：把尺寸收敛到 [min, upper] 区间 */
+const clampSize = (size: number, containerSize: number) =>
+  Math.min(Math.max(size, props.min), resolveUpperBound(containerSize))
+
 /* 拖拽开始 */
 const handleBarDown = (event: MouseEvent) => {
   event.preventDefault()
@@ -64,37 +81,63 @@ const handleBarDown = (event: MouseEvent) => {
   startSize = Math.min(Math.max(props.modelValue, props.min), props.max)
   startContainer =
     props.direction === 'horizontal' ? el.clientWidth : el.clientHeight
+  dragSize = startSize
   window.addEventListener('mousemove', handleBarMove)
   window.addEventListener('mouseup', handleBarUp)
+  originalUserSelect = document.body.style.userSelect
   document.body.style.userSelect = 'none'
 }
 
-/* 拖拽移动 */
+/* 拖拽移动（高频更新只走 update:modelValue） */
 const handleBarMove = (event: MouseEvent) => {
   if (!dragging.value) return
   const delta = (props.direction === 'horizontal' ? event.clientX : event.clientY) - startClient
-  const next = Math.min(Math.max(startSize + delta, props.min), startContainer - props.min)
+  const next = clampSize(startSize + delta, startContainer)
+  dragSize = next
   emit('update:modelValue', next)
-  emit('change', next)
 }
 
-/* 拖拽结束 */
+/* 拖拽结束（一次性上报最终值） */
 const handleBarUp = () => {
   if (!dragging.value) return
   dragging.value = false
   window.removeEventListener('mousemove', handleBarMove)
   window.removeEventListener('mouseup', handleBarUp)
-  document.body.style.userSelect = ''
+  document.body.style.userSelect = originalUserSelect
+  if (dragSize !== startSize) emit('change', dragSize)
+}
+
+/* 交互处理逻辑：键盘调整尺寸（水平方向左右键 / 垂直方向上下键） */
+const handleBarKeydown = (event: KeyboardEvent) => {
+  const horizontal = props.direction === 'horizontal'
+  const decreaseKey = horizontal ? 'ArrowLeft' : 'ArrowUp'
+  const increaseKey = horizontal ? 'ArrowRight' : 'ArrowDown'
+  if (event.key !== decreaseKey && event.key !== increaseKey) return
+  event.preventDefault()
+  const el = containerRef.value
+  if (!el) return
+  const containerSize = horizontal ? el.clientWidth : el.clientHeight
+  const current = clampSize(props.modelValue, containerSize)
+  const delta = event.key === increaseKey ? props.step : -props.step
+  const next = clampSize(current + delta, containerSize)
+  if (next === current) return
+  emit('update:modelValue', next)
+  emit('change', next)
 }
 
 onBeforeUnmount(() => {
   window.removeEventListener('mousemove', handleBarMove)
   window.removeEventListener('mouseup', handleBarUp)
+  /* 拖拽中卸载时同样还原 body 用户选择样式，避免全局锁死 */
+  if (dragging.value) {
+    dragging.value = false
+    document.body.style.userSelect = originalUserSelect
+  }
 })
 </script>
 
 <template>
-  <div ref="containerRef" :class="classes">
+  <div ref="containerRef" :class="classes" :style="highlightStyle">
     <div class="wt-splitter__pane wt-splitter__pane--first" :style="panelStyle">
       <slot name="first" />
     </div>
@@ -111,6 +154,7 @@ onBeforeUnmount(() => {
       :aria-valuemax="max"
       tabindex="0"
       @mousedown="handleBarDown"
+      @keydown="handleBarKeydown"
     >
       <span class="wt-splitter__bar-dot" aria-hidden="true" />
     </div>
@@ -176,7 +220,7 @@ onBeforeUnmount(() => {
   /* 背景 */
   background: color-mix(in srgb, var(--wt-text-secondary) 10%, transparent);
   /* 过渡 */
-  transition: background 0.25s ease;
+  transition: background var(--wt-motion-fast) ease;
   /* 触摸操作 */
   touch-action: none;
 }
@@ -199,7 +243,7 @@ onBeforeUnmount(() => {
   /* 水滴内外部阴影层次 */
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   /* 过渡 */
-  transition: background 0.25s ease;
+  transition: background var(--wt-motion-fast) ease;
 }
 
 .wt-splitter--vertical .wt-splitter__bar-dot {

@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted } from 'vue'
 import type { StepProps, StepStatus } from './props'
 import { useSteps } from './context'
+import { useHighlightStyle } from '../../utils/highlight'
 
 /* 组件注册名（供全局组件与 DevTools 识别） */
 defineOptions({ name: 'WtStep' })
@@ -17,11 +18,23 @@ const props = withDefaults(defineProps<StepProps>(), {
 /* 获取父级 Steps 上下文 */
 const steps = useSteps()
 
-/* 派生状态：当前步骤索引 */
-const index = computed(() => {
-  if (!steps) return 0
-  return steps.length > 0 ? steps.length - 1 : 0
+/* 组件级高光参数（优先级高于全局配置） */
+const highlightStyle = useHighlightStyle(props)
+
+/* 步骤注册令牌：用于在父级注册列表中定位自身索引 */
+const token = {}
+
+onMounted(() => {
+  steps?.register(token)
 })
+
+onBeforeUnmount(() => {
+  steps?.unregister(token)
+})
+
+/* 派生状态：当前步骤索引 */
+const rawIndex = computed(() => (steps ? steps.indexOf(token) : -1))
+const index = computed(() => Math.max(0, rawIndex.value))
 
 /* 派生状态：步骤状态 */
 const status = computed<StepStatus>(() => {
@@ -58,7 +71,7 @@ const iconText = computed(() => {
 </script>
 
 <template>
-  <li :class="classes" role="listitem" @click="handleClick">
+  <li :class="classes" :style="highlightStyle" role="listitem" @click="handleClick">
     <span class="wt-step__tail" aria-hidden="true" />
 
     <span class="wt-step__head">
@@ -79,7 +92,21 @@ const iconText = computed(() => {
 </template>
 
 <style scoped lang="scss">
+@use '@water-ui/theme/src/mixins/index.scss' as wt;
+
 .wt-step {
+  /* 高光尺寸（随全局基准等比缩放，6px / 12px）：声明在根元素，便于组件 props 覆盖 */
+  --wt-highlight-size: calc(var(--wt-highlight-size-base) * 0.5);
+  /* 次高光尺寸（随全局基准等比缩放，3px / 12px） */
+  --wt-highlight-small-size: calc(var(--wt-highlight-size-base) * 0.25);
+  /* 高光内边距（随全局偏移等比缩放，3px / 8px） */
+  --wt-highlight-inset: calc(var(--wt-highlight-offset) * 0.375);
+  /* 主高光定位：右上角 */
+  --wt-highlight-top: var(--wt-highlight-inset);
+  --wt-highlight-right: var(--wt-highlight-inset);
+  /* 次高光定位：右下角，避让步骤序号 */
+  --wt-highlight-small-top: calc(100% - var(--wt-highlight-small-size) - var(--wt-highlight-inset));
+  --wt-highlight-small-right: var(--wt-highlight-inset);
   /* 定位方式 */
   position: relative;
   /* 盒模型显示方式 */
@@ -115,6 +142,12 @@ const iconText = computed(() => {
 }
 
 .wt-step__icon {
+  /* 水滴高光：定位方式 + 独立层叠上下文 + 主/次高光伪元素（层叠层级 2） */
+  @include wt.wt-liquid-highlights(2);
+  /* 溢出裁剪方式（高光收束在步骤图标内） */
+  overflow: hidden;
+  /* 液体形变动画（含 will-change: border-radius） */
+  @include wt.wt-liquid-animation(wt-liquid-flow, var(--wt-motion-slow), border-radius);
   /* 盒模型显示方式 */
   display: inline-flex;
   /* 交叉轴对齐方式 */
@@ -146,9 +179,9 @@ const iconText = computed(() => {
   font-weight: 600;
   /* 过渡动画 */
   transition:
-    background 0.25s ease,
-    color 0.25s ease,
-    transform 0.25s ease;
+    background var(--wt-motion-fast) ease,
+    color var(--wt-motion-fast) ease,
+    transform var(--wt-motion-fast) ease;
 }
 
 .wt-step__tail {
@@ -255,6 +288,12 @@ const iconText = computed(() => {
 .wt-step.is-clickable:hover .wt-step__icon {
   /* 形变 */
   transform: translateY(-1px) scale(1.05);
+}
+
+/* 最后一步不渲染连接线 */
+.wt-step.is-last .wt-step__tail {
+  /* 盒模型显示方式 */
+  display: none;
 }
 
 /* 垂直方向布局 */

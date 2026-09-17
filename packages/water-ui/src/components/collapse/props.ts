@@ -1,3 +1,5 @@
+import type { HighlightProps } from '../../utils/highlight'
+
 export interface CollapseProps {
   /** 当前激活面板 key（可多选时用数组） */
   activeKey?: string | string[]
@@ -14,7 +16,7 @@ export interface CollapseEmits {
   'update:activeKey': [activeKey: string | string[]]
 }
 
-export interface CollapseItemProps {
+export interface CollapseItemProps extends HighlightProps {
   /** 面板唯一标识 */
   name: string
   /** 面板标题 */
